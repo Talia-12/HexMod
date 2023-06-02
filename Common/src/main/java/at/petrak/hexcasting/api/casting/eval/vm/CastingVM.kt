@@ -41,22 +41,9 @@ class CastingVM(var image: CastingImage, val env: CastingEnvironment) {
         val info = TempControllerInfo(earlyExit = false)
         var lastResolutionType = ResolvedPatternType.UNRESOLVED
         while (continuation is SpellContinuation.NotDone && !info.earlyExit) {
-            // Take the top of the continuation stack...
-            val next = continuation.frame
-            // ...and execute it.
-            // TODO there used to be error checking code here; I'm pretty sure any and all mishaps should already
-            // get caught and folded into CastResult by evaluate.
-            val image2 = next.evaluate(continuation.next, world, this)
-            // Then write all pertinent data back to the harness for the next iteration.
-            if (image2.newData != null) {
-                this.image = image2.newData
-            }
-            this.env.postExecution(image2)
-
-            continuation = image2.continuation
-            lastResolutionType = image2.resolutionType
-            performSideEffects(info, image2.sideEffects)
-            info.earlyExit = info.earlyExit || !lastResolutionType.success
+            val out = stepContinuationOnce(continuation, world, info)
+            continuation = out.first
+            lastResolutionType = out.second
         }
 
         if (continuation is SpellContinuation.NotDone) {
@@ -68,6 +55,25 @@ class CastingVM(var image: CastingImage, val env: CastingEnvironment) {
 
         val isStackClear = image.stack.isEmpty() && image.parenCount == 0 && !image.escapeNext && ravenmind == null
         return ExecutionClientView(isStackClear, lastResolutionType, stackDescs, ravenmind)
+    }
+
+    fun stepContinuationOnce(continuation: SpellContinuation.NotDone, world: ServerLevel, info: TempControllerInfo): Pair<SpellContinuation, ResolvedPatternType> {
+        // Take the top of the continuation stack...
+        val next = continuation.frame
+        // ...and execute it.
+        // TODO there used to be error checking code here; I'm pretty sure any and all mishaps should already
+        // get caught and folded into CastResult by evaluate.
+        val image2 = next.evaluate(continuation.next, world, this)
+        // Then write all pertinent data back to the harness for the next iteration.
+        if (image2.newData != null) {
+            this.image = image2.newData
+        }
+        this.env.postExecution(image2)
+
+        val lastResolutionType = image2.resolutionType
+        performSideEffects(info, image2.sideEffects)
+        info.earlyExit = info.earlyExit || !lastResolutionType.success
+        return image2.continuation to lastResolutionType
     }
 
     /**

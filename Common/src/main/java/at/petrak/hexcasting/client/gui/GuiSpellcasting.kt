@@ -37,7 +37,7 @@ import net.minecraft.world.phys.Vec2
 import kotlin.math.*
 
 // TODO winfy: fix this class to use ExecutionClientView
-class GuiSpellcasting constructor(
+open class GuiSpellcasting constructor(
     private val handOpenedWith: InteractionHand,
     private var patterns: MutableList<ResolvedPattern>,
     private var cachedStack: List<CompoundTag>,
@@ -54,6 +54,26 @@ class GuiSpellcasting constructor(
     private var ambianceSoundInstance: GridSoundInstance? = null
 
     private val randSrc = SoundInstance.createUnseededRandom()
+
+    val minIotasX: Int get() = 0
+    val minIotasY: Int get() = 0
+    val maxIotasX: Int get() = (this.width * LHS_IOTAS_ALLOCATION).toInt()
+    val maxIotasXBuffer: Int get() = 5
+    val maxIotasY: Int get() = this.height
+    val maxIotasYBuffer: Int get() = 10
+
+    val minGridX: Int get() = 0
+    val minGridY: Int get() = 0
+    val maxGridX: Int get() = this.width
+    val maxGridY: Int get() = this.height
+
+    val minRavenmindX: Int get() = (this.width * (1.0 - RHS_IOTAS_ALLOCATION) - 10).toInt()
+    val minRavenmindY: Int get() = 10
+    val maxRavenmindX: Int get() = (this.width * RHS_IOTAS_ALLOCATION).toInt() + minRavenmindX
+    val maxRavenmindY: Int get() = (30.0 * ADD_L_SCALE).toInt()
+
+    fun gridContains(coord: HexCoord): Boolean = gridContains(this.coordToPx(coord))
+    fun gridContains(p: Vec2): Boolean =  minGridX <= p.x && p.x <= maxGridX && minGridY <= p.y && p.y <= maxGridY
 
     init {
         for ((pattern, origin) in patterns) {
@@ -83,7 +103,7 @@ class GuiSpellcasting constructor(
 
     fun calculateIotaDisplays() {
         val mc = Minecraft.getInstance()
-        val width = (this.width * LHS_IOTAS_ALLOCATION).toInt()
+        val width = maxIotasX - minIotasX
         this.stackDescs =
             this.cachedStack.map { IotaType.getDisplayWithMaxWidth(it, width, mc.font) }
                 .asReversed()
@@ -96,11 +116,7 @@ class GuiSpellcasting constructor(
         this.parenDescs = emptyList()
         this.ravenmind =
             this.cachedRavenmind?.let {
-                IotaType.getDisplayWithMaxWidth(
-                    it,
-                    (this.width * RHS_IOTAS_ALLOCATION).toInt(),
-                    mc.font
-                )
+                IotaType.getDisplayWithMaxWidth(it, width, mc.font)
             }
     }
 
@@ -136,7 +152,7 @@ class GuiSpellcasting constructor(
         val my = Mth.clamp(myOut, 0.0, this.height.toDouble())
         if (this.drawState is PatternDrawState.BetweenPatterns) {
             val coord = this.pxToCoord(Vec2(mx.toFloat(), my.toFloat()))
-            if (!this.usedSpots.contains(coord)) {
+            if (gridContains(coord) && !this.usedSpots.contains(coord)) {
                 this.drawState = PatternDrawState.JustStarted(coord)
                 Minecraft.getInstance().soundManager.play(
                     SimpleSoundInstance(
@@ -184,7 +200,7 @@ class GuiSpellcasting constructor(
                 // location as if they had hit it exactly on the nose.
                 val idealNextLoc = anchorCoord + newdir
                 var playSound = false
-                if (!this.usedSpots.contains(idealNextLoc)) {
+                if (gridContains(idealNextLoc) && !this.usedSpots.contains(idealNextLoc)) {
                     if (this.drawState is PatternDrawState.JustStarted) {
                         val pat = HexPattern(newdir)
 
@@ -321,7 +337,7 @@ class GuiSpellcasting constructor(
         val mouseCoord = this.pxToCoord(mousePos)
         val radius = 3
         for (dotCoord in mouseCoord.rangeAround(radius)) {
-            if (!this.usedSpots.contains(dotCoord)) {
+            if (gridContains(dotCoord) && !this.usedSpots.contains(dotCoord)) {
                 val dotPx = this.coordToPx(dotCoord)
                 val delta = dotPx.add(mousePos.negated()).length()
                 // when right on top of the cursor, 1.0
@@ -424,8 +440,8 @@ class GuiSpellcasting constructor(
             val boxHeight = (this.stackDescs.size + 1f) * 10f
             RenderSystem.setShader(GameRenderer::getPositionColorShader)
             RenderSystem.enableBlend()
-            drawBox(ps, 0f, 0f, (this.width * LHS_IOTAS_ALLOCATION + 5).toFloat(), boxHeight)
-            ps.translate(0.0, 0.0, 1.0)
+            drawBox(ps, minIotasX.toFloat(), minIotasY.toFloat(), maxIotasX.toFloat() + maxIotasXBuffer, min(boxHeight, maxIotasY.toFloat() + maxIotasYBuffer))
+            ps.translate(minIotasX.toDouble(),  minIotasY.toDouble(), 1.0)
             RenderSystem.setShader { prevShader }
             for (desc in this.stackDescs) {
                 graphics.drawString(font, desc, 5, 7, -1) // TODO: Confirm this works
@@ -439,12 +455,12 @@ class GuiSpellcasting constructor(
             ps.pushPose()
             val boxHeight = 15f
             val addlScale = 1.5f
-            ps.translate(this.width * (1.0 - RHS_IOTAS_ALLOCATION * addlScale) - 10, 10.0, 0.0)
+            ps.translate(minRavenmindX.toDouble(), minRavenmindY.toDouble(), 0.0)
             RenderSystem.setShader(GameRenderer::getPositionColorShader)
             RenderSystem.enableBlend()
             drawBox(
                 ps, 0f, 0f,
-                (this.width * RHS_IOTAS_ALLOCATION * addlScale).toFloat(), boxHeight * addlScale,
+                (maxRavenmindX - minRavenmindX).toFloat(), min((boxHeight * ADD_L_SCALE).toFloat(), (maxRavenmindY - minRavenmindY).toFloat()),
             )
             ps.translate(5.0, 5.0, 1.0)
             ps.scale(addlScale, addlScale, 1f)
@@ -494,8 +510,9 @@ class GuiSpellcasting constructor(
     }
 
     companion object {
+        const val ADD_L_SCALE = 1.5
         const val LHS_IOTAS_ALLOCATION = 0.7
-        const val RHS_IOTAS_ALLOCATION = 0.15
+        const val RHS_IOTAS_ALLOCATION = 0.15 * ADD_L_SCALE
 
         fun drawBox(ps: PoseStack, x: Float, y: Float, w: Float, h: Float, leftMargin: Float = 2.5f) {
             RenderSystem.setShader(GameRenderer::getPositionColorShader)
