@@ -62,7 +62,7 @@ public record MsgOpenSpellGuiS2C(InteractionHand hand, List<ResolvedPattern> pat
                 var mc = Minecraft.getInstance();
                 mc.setScreen(
                     new GuiSpellcasting(msg.hand(), msg.patterns(), msg.stack, msg.ravenmind,
-                        msg.parenCount));
+                        null, null, false, msg.parenCount));
             }
         });
     }

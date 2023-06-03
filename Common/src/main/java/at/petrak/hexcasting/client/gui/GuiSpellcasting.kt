@@ -1,8 +1,10 @@
 package at.petrak.hexcasting.client.gui
 
+import at.petrak.hexcasting.api.casting.eval.DebugClientView
 import at.petrak.hexcasting.api.casting.eval.ExecutionClientView
 import at.petrak.hexcasting.api.casting.eval.ResolvedPattern
 import at.petrak.hexcasting.api.casting.eval.ResolvedPatternType
+import at.petrak.hexcasting.api.casting.eval.vm.SpellContinuation
 import at.petrak.hexcasting.api.casting.iota.IotaType
 import at.petrak.hexcasting.api.casting.math.HexAngle
 import at.petrak.hexcasting.api.casting.math.HexCoord
@@ -37,16 +39,21 @@ import net.minecraft.world.phys.Vec2
 import kotlin.math.*
 
 // TODO winfy: fix this class to use ExecutionClientView
-open class GuiSpellcasting constructor(
+class GuiSpellcasting constructor(
     private val handOpenedWith: InteractionHand,
     private var patterns: MutableList<ResolvedPattern>,
     private var cachedStack: List<CompoundTag>,
     private var cachedRavenmind: CompoundTag?,
+    private var cachedDebuggedContinuation: CompoundTag?,
+    private var cachedExpandedFrames: List<Boolean>?,
+    private var displayDebugger: Boolean,
     private var parenCount: Int,
 ) : Screen("gui.hexcasting.spellcasting".asTranslatedComponent) {
     private var stackDescs: List<FormattedCharSequence> = listOf()
     private var parenDescs: List<FormattedCharSequence> = listOf()
     private var ravenmind: FormattedCharSequence? = null
+
+    private var debuggerDescs: List<FormattedCharSequence> = listOf()
 
     private var drawState: PatternDrawState = PatternDrawState.BetweenPatterns
     private val usedSpots: MutableSet<HexCoord> = HashSet()
@@ -61,6 +68,11 @@ open class GuiSpellcasting constructor(
     val maxIotasXBuffer: Int get() = 5
     val maxIotasY: Int get() = this.height
     val maxIotasYBuffer: Int get() = 10
+
+    val minDebuggerX: Int get() = maxIotasX + 2 * maxIotasXBuffer
+    val minDebuggerY: Int get() = 0
+    val maxDebuggerX: Int get() = minDebuggerX + (this.width - minRavenmindX)
+    val maxDebuggerY: Int get() = this.height
 
     val minGridX: Int get() = 0
     val minGridY: Int get() = 0
@@ -101,12 +113,41 @@ open class GuiSpellcasting constructor(
         this.calculateIotaDisplays()
     }
 
+    fun recvServerDebugUpdate(info: DebugClientView) {
+        if (info.isDebugComplete && info.isStackClear) {
+            this.minecraft?.setScreen(null)
+            return
+        }
+        if (info.isDebugComplete) {
+            this.cachedDebuggedContinuation = null
+            this.cachedExpandedFrames = null
+            this.setDebugging(false)
+        }
+
+        this.cachedStack = info.stackDescs
+        this.cachedRavenmind = info.ravenmind
+        this.cachedDebuggedContinuation = info.debuggedContinuation
+        this.calculateIotaDisplays()
+        this.calculateDebuggedContinuationDisplays()
+    }
+
+    fun setDebugging(display: Boolean) {
+        if (!display) {
+            this.displayDebugger = false
+            return
+        }
+
+        this.displayDebugger = true
+        this.drawState = PatternDrawState.BetweenPatterns
+        this.calculateDebuggedContinuationDisplays()
+    }
+
     fun calculateIotaDisplays() {
         val mc = Minecraft.getInstance()
         val width = maxIotasX - minIotasX
         this.stackDescs =
-            this.cachedStack.map { IotaType.getDisplayWithMaxWidth(it, width, mc.font) }
-                .asReversed()
+                this.cachedStack.map { IotaType.getDisplayWithMaxWidth(it, width, mc.font) }
+                        .asReversed()
 //        this.parenDescs = if (this.cachedParens.isNotEmpty())
 //            this.cachedParens.flatMap { HexIotaTypes.getDisplayWithMaxWidth(it, width, mc.font) }
 //        else if (this.parenCount > 0)
@@ -118,6 +159,12 @@ open class GuiSpellcasting constructor(
             this.cachedRavenmind?.let {
                 IotaType.getDisplayWithMaxWidth(it, width, mc.font)
             }
+    }
+
+    fun calculateDebuggedContinuationDisplays() {
+        val mc = Minecraft.getInstance()
+        val width = maxDebuggerX - minDebuggerX
+        this.debuggerDescs = SpellContinuation.getDisplayWithMaxWidth(this.cachedDebuggedContinuation!!, cachedExpandedFrames!!, width, mc.font)
     }
 
     override fun init() {
@@ -146,6 +193,11 @@ open class GuiSpellcasting constructor(
     override fun mouseClicked(mxOut: Double, myOut: Double, pButton: Int): Boolean {
         if (super.mouseClicked(mxOut, myOut, pButton)) {
             return true
+        }
+
+        // TODO: Debug
+        if (pButton == 2) {
+
         }
 
         val mx = Mth.clamp(mxOut, 0.0, this.width.toDouble())

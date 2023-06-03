@@ -4,10 +4,20 @@ import at.petrak.hexcasting.api.casting.SpellList
 import at.petrak.hexcasting.api.casting.eval.CastResult
 import at.petrak.hexcasting.api.casting.iota.Iota
 import at.petrak.hexcasting.common.lib.hex.HexContinuationTypes
+import at.petrak.hexcasting.api.casting.iota.IotaType
+import at.petrak.hexcasting.api.utils.asCompound
+import at.petrak.hexcasting.api.utils.asTextComponent
+import at.petrak.hexcasting.api.utils.getList
+import at.petrak.hexcasting.api.utils.hasList
+import at.petrak.hexcasting.common.lib.hex.HexIotaTypes
+import net.minecraft.ChatFormatting
+import net.minecraft.client.gui.Font
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.nbt.Tag
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.network.chat.Component
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.util.FormattedCharSequence
 
 /**
  * A single frame of evaluation during the execution of a spell.
@@ -103,6 +113,52 @@ interface ContinuationFrame {
 
             val typeLoc = ResourceLocation(typeKey)
             return HexContinuationTypes.REGISTRY[typeLoc]
+        }
+
+        fun displayOneLine(tag: CompoundTag, width: Int, font: Font): FormattedCharSequence {
+            val display = display(tag)
+            val splitted = font.split(display, width - font.width("..."))
+            return if (splitted.isEmpty()) FormattedCharSequence.EMPTY else if (splitted.size == 1) splitted[0] else {
+                val first = splitted[0]
+                FormattedCharSequence.fromPair(first,
+                        Component.literal("...").withStyle(ChatFormatting.GRAY).visualOrderText)
+            }
+        }
+
+        @JvmStatic
+        fun display(tag: CompoundTag): Component {
+            return when (tag.getString("type")) {
+                "evaluate" ->  "evaluate".asTextComponent
+                "end" -> "end".asTextComponent
+                "foreach" -> "foreach".asTextComponent
+                else -> Component.translatable("hexcasting.spelldata.unknown").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC)
+            }
+        }
+
+        @JvmStatic
+        fun displayExpanded(tag: CompoundTag, width: Int, font: Font): List<FormattedCharSequence> {
+            val displays = displayExpanded(tag)
+            val splitted = displays.map { font.split(it, width - font.width("...")) }.map {
+                if (it.isEmpty()) FormattedCharSequence.EMPTY else if (it.size == 1) it[0] else {
+                    val first = it[0]
+                    FormattedCharSequence.fromPair(first, Component.literal("...").withStyle(ChatFormatting.GRAY).visualOrderText)
+                }
+            }
+            return splitted
+        }
+
+        @JvmStatic
+        fun displayExpanded(tag: CompoundTag): List<Component> {
+            return when (tag.getString("type")) {
+                "evaluate" -> listOf(Component.literal("["))
+                                .plus(tag.getList("patterns", Tag.TAG_COMPOUND).map { IotaType.getDisplay(it.asCompound) })
+                                .plus(Component.literal("]"))
+                "end" -> listOf(Component.literal("End"))
+                "foreach" -> listOf(Component.literal("["))
+                        .plus(tag.getList("code", Tag.TAG_COMPOUND).map { IotaType.getDisplay(it.asCompound) })
+                        .plus(Component.literal("]"))
+                else -> listOf(Component.translatable("hexcasting.spelldata.unknown").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC))
+            }
         }
     }
 }

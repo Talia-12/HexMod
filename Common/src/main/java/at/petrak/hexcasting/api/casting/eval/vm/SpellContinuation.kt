@@ -1,10 +1,13 @@
 package at.petrak.hexcasting.api.casting.eval.vm
 
 import at.petrak.hexcasting.api.utils.NBTBuilder
+import at.petrak.hexcasting.api.utils.asCompound
 import at.petrak.hexcasting.api.utils.getList
+import net.minecraft.client.gui.Font
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.nbt.Tag
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.util.FormattedCharSequence
 
 /**
  * A continuation during the execution of a spell.
@@ -41,6 +44,19 @@ sealed interface SpellContinuation {
                 }
             }
             return result
+        }
+
+        @JvmStatic
+        fun getDisplayWithMaxWidth(nbt: CompoundTag, expanded: List<Boolean>, width: Int, font: Font): List<FormattedCharSequence> {
+            val outList = mutableListOf<FormattedCharSequence>()
+
+            val frames = nbt.getList(TAG_FRAME, Tag.TAG_COMPOUND)
+            for ((frame, expanded) in (frames.reversed().zip(expanded))) {
+                if (expanded) outList.addAll(ContinuationFrame.displayExpanded(frame.asCompound, width, font))
+                else outList.add(ContinuationFrame.displayOneLine(frame.asCompound, width, font))
+            }
+
+            return outList
         }
     }
 }

@@ -15,3 +15,16 @@ data class ExecutionClientView(
     val ravenmind: CompoundTag?,
 )
 
+/**
+ * Information sent back to the client when running the debugger
+ */
+data class DebugClientView(
+    val isDebugComplete: Boolean,
+    val isStackClear: Boolean,
+
+    // These must be tags so the wrapping of the text can happen on the client
+    // otherwise we don't know when to stop rendering
+    val stackDescs: List<CompoundTag>,
+    val ravenmind: CompoundTag?,
+    val debuggedContinuation: CompoundTag
+)
