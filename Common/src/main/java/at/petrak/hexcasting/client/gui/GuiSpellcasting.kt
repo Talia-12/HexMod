@@ -63,39 +63,44 @@ class GuiSpellcasting constructor(
 
     private val randSrc = SoundInstance.createUnseededRandom()
 
+    val lhsIotasAllocation get() = if (displayDebugger) 0.4 else 0.7
+
     val minIotasX: Int get() = 0
     val minIotasY: Int get() = 0
-    val maxIotasX: Int get() = (this.width * LHS_IOTAS_ALLOCATION).toInt()
+    val maxIotasWidth: Int get() = (this.width * lhsIotasAllocation).toInt()
     val maxIotasXBuffer: Int get() = 5
-    val maxIotasY: Int get() = this.height
+    val maxIotasHeight: Int get() = this.height
     val maxIotasYBuffer: Int get() = 10
 
-    val minDebuggerX: Int get() = maxIotasX + 2 * maxIotasXBuffer
+    val minDebuggerX: Int get() = minIotasX + maxIotasWidth + 3 * maxIotasXBuffer
     val minDebuggerY: Int get() = 0
-    val maxDebuggerX: Int get() = minDebuggerX + (this.width - minRavenmindX) - maxDebuggerXBuffer
+    val maxDebuggerWidth: Int get() = this.width - maxIotasWidth - 3 * maxIotasXBuffer - 2 * maxDebuggerXBuffer
     val maxDebuggerXBuffer: Int get() = 5
-    val maxDebuggerY: Int get() = this.height
+    val maxDebuggerHeight: Int get() = this.height
     val maxDebuggerYBuffer: Int get() = 10
 
     val minGridX: Int get() = 0
     val minGridY: Int get() = 0
-    val maxGridX: Int get() = this.width
-    val maxGridY: Int get() = this.height
+    val maxGridWidth: Int get() = this.width
+    val maxGridHeight: Int get() = this.height
     val gridMargin: Int get() = 15
 
-    val minRavenmindX: Int get() = (this.width * (1.0 - RHS_IOTAS_ALLOCATION) - 10).toInt()
+    val minRavenmindX: Int get() = if (displayDebugger) minDebuggerX else (this.width * (1.0 - RHS_IOTAS_ALLOCATION) - 10).toInt()
     val minRavenmindY: Int get() = 10
-    val maxRavenmindX: Int get() = (this.width * RHS_IOTAS_ALLOCATION).toInt() + minRavenmindX
-    val maxRavenmindY: Int get() = (30.0 * ADD_L_SCALE).toInt()
+    val maxRavenmindWidth: Int get() = if (displayDebugger) maxDebuggerWidth else (this.width * RHS_IOTAS_ALLOCATION).toInt()
+    val maxRavenmindHeight: Int get() = (30.0 * ADD_L_SCALE).toInt()
 
     fun gridContains(coord: HexCoord): Boolean = gridContains(this.coordToPx(coord))
-    fun gridContains(p: Vec2): Boolean = (minGridX - gridMargin) <= p.x && p.x <= (maxGridX + gridMargin) && (minGridY - gridMargin) <= p.y && p.y <= (maxGridY + gridMargin)
+    fun gridContains(p: Vec2): Boolean =
+            (minGridX - gridMargin) <= p.x && p.x <= (minGridX + maxGridWidth + gridMargin) &&
+            (minGridY - gridMargin) <= p.y && p.y <= (minGridY + maxGridHeight + gridMargin)
 
     init {
         for ((pattern, origin) in patterns) {
             this.usedSpots.addAll(pattern.positions(origin))
         }
         this.calculateIotaDisplays()
+        this.calculateDebuggedContinuationDisplays()
     }
 
     fun recvServerUpdate(info: ExecutionClientView, index: Int) {
@@ -138,19 +143,21 @@ class GuiSpellcasting constructor(
     fun setDebugging(display: Boolean) {
         if (!display) {
             this.displayDebugger = false
+            this.calculateIotaDisplays()
+            this.calculateDebuggedContinuationDisplays()
             return
         }
 
         this.displayDebugger = true
         this.drawState = PatternDrawState.BetweenPatterns
+        this.calculateIotaDisplays()
         this.calculateDebuggedContinuationDisplays()
     }
 
     fun calculateIotaDisplays() {
         val mc = Minecraft.getInstance()
-        val width = maxIotasX - minIotasX
         this.stackDescs =
-                this.cachedStack.map { IotaType.getDisplayWithMaxWidth(it, width, mc.font) }
+                this.cachedStack.map { IotaType.getDisplayWithMaxWidth(it, maxIotasWidth, mc.font) }
                         .asReversed()
 //        this.parenDescs = if (this.cachedParens.isNotEmpty())
 //            this.cachedParens.flatMap { HexIotaTypes.getDisplayWithMaxWidth(it, width, mc.font) }
@@ -161,18 +168,17 @@ class GuiSpellcasting constructor(
         this.parenDescs = emptyList()
         this.ravenmind =
             this.cachedRavenmind?.let {
-                IotaType.getDisplayWithMaxWidth(it, width, mc.font)
+                IotaType.getDisplayWithMaxWidth(it, maxRavenmindWidth, mc.font)
             }
     }
 
     fun calculateDebuggedContinuationDisplays() {
         val mc = Minecraft.getInstance()
-        val width = maxDebuggerX - minDebuggerX
         this.cachedDebuggedContinuation?.let {
             while (this.cachedExpandedFrames.size < SpellContinuation.numFramesInNbt(it))
                 this.cachedExpandedFrames.add(true)
 
-            this.debuggerDescs = SpellContinuation.getDisplayWithMaxWidth(it, cachedExpandedFrames, width, mc.font)
+            this.debuggerDescs = SpellContinuation.getDisplayWithMaxWidth(it, cachedExpandedFrames, maxDebuggerWidth, mc.font)
         }
     }
 
@@ -211,7 +217,9 @@ class GuiSpellcasting constructor(
             IClientXplatAbstractions.INSTANCE.sendPacketToServer(
                     MsgDebuggerActionC2S(this.handOpenedWith)
             )
-        } else if (displayDebugger) {
+        }
+
+        if (displayDebugger) {
             return false
         }
 
@@ -398,34 +406,38 @@ class GuiSpellcasting constructor(
         RenderSystem.disableDepthTest()
         RenderSystem.disableCull()
 
-        // Draw guide dots around the cursor
         val mousePos = Vec2(pMouseX.toFloat(), pMouseY.toFloat())
-        // snap it to the center
-        val mouseCoord = this.pxToCoord(mousePos)
-        val radius = 3
-        for (dotCoord in mouseCoord.rangeAround(radius)) {
-            if (gridContains(dotCoord) && !this.usedSpots.contains(dotCoord)) {
-                val dotPx = this.coordToPx(dotCoord)
-                val delta = dotPx.add(mousePos.negated()).length()
-                // when right on top of the cursor, 1.0
-                // when at the full radius, 0! this is so we don't have dots suddenly appear/disappear.
-                // we subtract size from delta so there's a little "island" of 100% bright points by the mouse
-                val scaledDist = Mth.clamp(
-                    1.0f - ((delta - this.hexSize()) / (radius.toFloat() * this.hexSize())),
-                    0f,
-                    1f
-                )
-                drawSpot(
-                    mat,
-                    dotPx,
-                    scaledDist * 2f,
-                    Mth.lerp(scaledDist, 0.4f, 0.5f),
-                    Mth.lerp(scaledDist, 0.8f, 1.0f),
-                    Mth.lerp(scaledDist, 0.7f, 0.9f),
-                    scaledDist
-                )
+
+        if (!displayDebugger) {
+            // Draw guide dots around the cursor
+            // snap it to the center
+            val mouseCoord = this.pxToCoord(mousePos)
+            val radius = 3
+            for (dotCoord in mouseCoord.rangeAround(radius)) {
+                if (gridContains(dotCoord) && !this.usedSpots.contains(dotCoord)) {
+                    val dotPx = this.coordToPx(dotCoord)
+                    val delta = dotPx.add(mousePos.negated()).length()
+                    // when right on top of the cursor, 1.0
+                    // when at the full radius, 0! this is so we don't have dots suddenly appear/disappear.
+                    // we subtract size from delta so there's a little "island" of 100% bright points by the mouse
+                    val scaledDist = Mth.clamp(
+                        1.0f - ((delta - this.hexSize()) / (radius.toFloat() * this.hexSize())),
+                        0f,
+                        1f
+                    )
+                    drawSpot(
+                        mat,
+                        dotPx,
+                        scaledDist * 2f,
+                        Mth.lerp(scaledDist, 0.4f, 0.5f),
+                        Mth.lerp(scaledDist, 0.8f, 1.0f),
+                        Mth.lerp(scaledDist, 0.7f, 0.9f),
+                        scaledDist
+                    )
+                }
             }
         }
+
         RenderSystem.defaultBlendFunc()
 
         for ((idx, elts) in this.patterns.withIndex()) {
@@ -485,75 +497,109 @@ class GuiSpellcasting constructor(
         ps.pushPose()
         ps.translate(10.0, 10.0, 0.0)
 
-//        if (this.parenCount > 0) {
-//            val boxHeight = (this.parenDescs.size + 1f) * 10f
-//            RenderSystem.setShader(GameRenderer::getPositionColorShader)
-//            RenderSystem.defaultBlendFunc()
-//            drawBox(ps, 0f, 0f, (this.width * LHS_IOTAS_ALLOCATION + 5).toFloat(), boxHeight, 7.5f)
-//            ps.translate(0.0, 0.0, 1.0)
-//
-//            val time = ClientTickCounter.getTotal() * 0.16f
-//            val opacity = (Mth.map(cos(time), -1f, 1f, 200f, 255f)).toInt()
-//            val color = 0x00_ffffff or (opacity shl 24)
-//            RenderSystem.setShader { prevShader }
-//            for (desc in this.parenDescs) {
-//                font.draw(ps, desc, 10f, 7f, color)
-//                ps.translate(0.0, 10.0, 0.0)
-//            }
-//            ps.translate(0.0, 15.0, 0.0)
-//        }
+        var remainingVerticalSpace = this.height - 10.0
 
-        if (this.stackDescs.isNotEmpty()) {
-            val boxHeight = (this.stackDescs.size + 1f) * 10f
+        if (displayDebugger && this.parenCount > 0) {
+            val boxHeight = (this.parenDescs.size + 1f) * 10f
             RenderSystem.setShader(GameRenderer::getPositionColorShader)
-            RenderSystem.enableBlend()
-            drawBox(ps, minIotasX.toFloat(), minIotasY.toFloat(), maxIotasX.toFloat() + maxIotasXBuffer, min(boxHeight, maxIotasY.toFloat() + maxIotasYBuffer))
-            ps.translate(minIotasX.toDouble(),  minIotasY.toDouble(), 1.0)
+            RenderSystem.defaultBlendFunc()
+            ps.translate(minIotasX.toDouble(), minIotasY.toDouble(), 0.0)
+            remainingVerticalSpace -= minIotasY.toDouble()
+            drawBox(ps, 0.0f, 0.0f, (maxIotasWidth + maxIotasXBuffer).toFloat(), min(boxHeight, (maxIotasHeight + maxIotasYBuffer).toFloat()), 7.5f)
+            ps.translate(0.0, 0.0, 1.0)
+
+            val time = ClientTickCounter.getTotal() * 0.16f
+            val opacity = (Mth.map(cos(time), -1f, 1f, 200f, 255f)).toInt()
+            val color = 0x00_ffffff or (opacity shl 24)
             RenderSystem.setShader { prevShader }
-            for (desc in this.stackDescs) {
+            for (desc in this.parenDescs) {
                 graphics.drawString(font, desc, 5, 7, -1) // TODO: Confirm this works
                 ps.translate(0.0, 10.0, 0.0)
+                remainingVerticalSpace -= 10.0
             }
+            ps.translate(0.0, 15.0, 0.0)
+            remainingVerticalSpace -= 15.0
         }
-        ps.popPose()
 
-        if (this.displayDebugger && this.debuggerDescs.isNotEmpty()) {
-            val boxHeight = (this.debuggerDescs.size + 1f) * 10f
+        if (this.stackDescs.isNotEmpty()) {
             RenderSystem.setShader(GameRenderer::getPositionColorShader)
             RenderSystem.enableBlend()
-            drawBox(ps, minDebuggerX.toFloat(), minDebuggerY.toFloat(), maxDebuggerX.toFloat() + maxDebuggerXBuffer, min(boxHeight, maxDebuggerY.toFloat() + maxDebuggerYBuffer))
-            ps.translate(minDebuggerX.toDouble(),  minDebuggerY.toDouble(), 1.0)
+            if (!displayDebugger || this.parenCount == 0) {
+                ps.translate(minIotasX.toDouble(), minIotasY.toDouble(), 0.0)
+                remainingVerticalSpace -= minIotasY
+            }
+
+            remainingVerticalSpace -= 10.0
+            var boxHeight = min((this.stackDescs.size + 1f) * 10f, remainingVerticalSpace.toFloat())
+            if (displayDebugger)
+                boxHeight = remainingVerticalSpace.toFloat()
+
+            drawBox(ps, 0.0f, 0.0f, maxIotasWidth.toFloat() + maxIotasXBuffer, min(boxHeight, maxIotasHeight.toFloat() + maxIotasYBuffer))
+            ps.translate(0.0, 0.0, 1.0)
             RenderSystem.setShader { prevShader }
-            for (desc in this.debuggerDescs) {
-                font.draw(ps, desc, 5f, 7f, -1)
+            for (desc in this.stackDescs) {
+                font.draw(ps, desc, 5f, 7f, -1) // TODO: only draw if remaining vertical space
                 ps.translate(0.0, 10.0, 0.0)
+                remainingVerticalSpace -= 10.0
+                if (remainingVerticalSpace < 10.0)
+                    break
             }
         }
-
         ps.popPose()
+
+        ps.pushPose()
+
+        remainingVerticalSpace = this.height.toDouble()
         if (this.ravenmind != null) {
-            val kotlinBad = this.ravenmind!!
-            ps.pushPose()
             val boxHeight = 15f
-            val addlScale = 1.5f
-            ps.translate(minRavenmindX.toDouble(), minRavenmindY.toDouble(), 0.0)
+            ps.translate(minRavenmindX.toDouble() + maxDebuggerXBuffer, minRavenmindY.toDouble(), 0.0)
+            remainingVerticalSpace -= minRavenmindY
             RenderSystem.setShader(GameRenderer::getPositionColorShader)
             RenderSystem.enableBlend()
             drawBox(
                 ps, 0f, 0f,
-                (maxRavenmindX - minRavenmindX).toFloat(), min((boxHeight * ADD_L_SCALE).toFloat(), (maxRavenmindY - minRavenmindY).toFloat()),
+                maxRavenmindWidth.toFloat(), min((boxHeight * ADD_L_SCALE), (maxRavenmindHeight).toFloat()),
             )
+            ps.pushPose()
             ps.translate(5.0, 5.0, 1.0)
-            ps.scale(addlScale, addlScale, 1f)
+
+            ps.scale(ADD_L_SCALE, ADD_L_SCALE, 1f)
 
             val time = ClientTickCounter.getTotal() * 0.2f
             val opacity = (Mth.map(sin(time), -1f, 1f, 150f, 255f)).toInt()
             val color = 0x00_ffffff or (opacity shl 24)
 
             RenderSystem.setShader { prevShader }
-            graphics.drawString(font, kotlinBad, 0, 0, color) // TODO: Confirm this works
+            graphics.drawString(font, this.ravenmind!!, 0, 0, color) // TODO: Confirm this works
+
             ps.popPose()
+
+            ps.translate(0.0, min((boxHeight * ADD_L_SCALE).toDouble(), maxRavenmindHeight.toDouble()), 1.0)
+            remainingVerticalSpace -= min((boxHeight * ADD_L_SCALE).toDouble(), maxRavenmindHeight.toDouble())
         }
+
+        if (this.displayDebugger) {
+            RenderSystem.setShader(GameRenderer::getPositionColorShader)
+            RenderSystem.enableBlend()
+            if (ravenmind == null) {
+                ps.translate(minDebuggerX.toDouble() + maxDebuggerXBuffer,  minDebuggerY.toDouble(), 0.0)
+                remainingVerticalSpace -= minDebuggerY
+            }
+            drawBox(ps, 0.0f, 0.0f, maxDebuggerWidth.toFloat(), maxDebuggerHeight.toFloat() + maxDebuggerYBuffer)
+
+            ps.translate(5.0, 5.0, 1.0)
+            remainingVerticalSpace -= 5.0
+
+            RenderSystem.setShader { prevShader }
+            for (desc in this.debuggerDescs) {
+                graphics.drawString(font, desc, 5, 7, -1) // TODO: Confirm this works
+                ps.translate(0.0, 10.0, 0.0)
+                remainingVerticalSpace -= 10.0
+                if (remainingVerticalSpace < 10.0)
+                    break
+            }
+        }
+        ps.popPose()
 
         RenderSystem.setShader { prevShader }
     }
@@ -591,8 +637,7 @@ class GuiSpellcasting constructor(
     }
 
     companion object {
-        const val ADD_L_SCALE = 1.5
-        const val LHS_IOTAS_ALLOCATION = 0.7
+        const val ADD_L_SCALE = 1.5f
         const val RHS_IOTAS_ALLOCATION = 0.15 * ADD_L_SCALE
 
         fun drawBox(ps: PoseStack, x: Float, y: Float, w: Float, h: Float, leftMargin: Float = 2.5f) {

@@ -51,7 +51,7 @@ sealed interface SpellContinuation {
             val outList = mutableListOf<FormattedCharSequence>()
 
             val frames = nbt.getList(TAG_FRAME, Tag.TAG_COMPOUND)
-            for ((frame, expanded) in (frames.reversed().zip(expanded))) {
+            for ((frame, expanded) in (frames.zip(expanded))) {
                 if (expanded) outList.addAll(ContinuationFrame.displayExpanded(frame.asCompound, width, font))
                 else outList.add(ContinuationFrame.displayOneLine(frame.asCompound, width, font))
             }

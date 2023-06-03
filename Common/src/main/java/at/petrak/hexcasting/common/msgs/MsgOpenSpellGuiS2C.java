@@ -8,8 +8,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Optional;
 
 import static at.petrak.hexcasting.api.HexAPI.modLoc;
 
@@ -18,7 +20,8 @@ import static at.petrak.hexcasting.api.HexAPI.modLoc;
  */
 public record MsgOpenSpellGuiS2C(InteractionHand hand, List<ResolvedPattern> patterns,
                                  List<CompoundTag> stack,
-                                 CompoundTag ravenmind,
+                                 @Nullable CompoundTag ravenmind,
+                                 @Nullable CompoundTag debuggedContinuation,
                                  int parenCount
 )
     implements IMessage {
@@ -37,11 +40,12 @@ public record MsgOpenSpellGuiS2C(InteractionHand hand, List<ResolvedPattern> pat
         var patterns = buf.readList(fbb -> ResolvedPattern.fromNBT(fbb.readAnySizeNbt()));
 
         var stack = buf.readList(FriendlyByteBuf::readNbt);
-        var raven = buf.readAnySizeNbt();
+        var raven = buf.readOptional(FriendlyByteBuf::readNbt).orElse(null);
+        var debuggedContinuation = buf.readOptional(FriendlyByteBuf::readNbt).orElse(null);
 
         var parenCount = buf.readVarInt();
 
-        return new MsgOpenSpellGuiS2C(hand, patterns, stack, raven, parenCount);
+        return new MsgOpenSpellGuiS2C(hand, patterns, stack, raven, debuggedContinuation, parenCount);
     }
 
     public void serialize(FriendlyByteBuf buf) {
@@ -50,7 +54,8 @@ public record MsgOpenSpellGuiS2C(InteractionHand hand, List<ResolvedPattern> pat
         buf.writeCollection(this.patterns, (fbb, pat) -> fbb.writeNbt(pat.serializeToNBT()));
 
         buf.writeCollection(this.stack, FriendlyByteBuf::writeNbt);
-        buf.writeNbt(this.ravenmind);
+        buf.writeOptional(Optional.ofNullable(this.ravenmind), FriendlyByteBuf::writeNbt);
+        buf.writeOptional(Optional.ofNullable(this.debuggedContinuation), FriendlyByteBuf::writeNbt);
 
         buf.writeVarInt(this.parenCount);
     }
@@ -62,7 +67,7 @@ public record MsgOpenSpellGuiS2C(InteractionHand hand, List<ResolvedPattern> pat
                 var mc = Minecraft.getInstance();
                 mc.setScreen(
                     new GuiSpellcasting(msg.hand(), msg.patterns(), msg.stack, msg.ravenmind,
-                        null, false, msg.parenCount));
+                        msg.debuggedContinuation, false, msg.parenCount));
             }
         });
     }

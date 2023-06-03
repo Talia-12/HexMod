@@ -5,6 +5,7 @@ import at.petrak.hexcasting.common.lib.HexSounds;
 import at.petrak.hexcasting.common.msgs.MsgClearSpiralPatternsS2C;
 import at.petrak.hexcasting.common.msgs.MsgOpenSpellGuiS2C;
 import at.petrak.hexcasting.xplat.IXplatAbstractions;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
@@ -14,6 +15,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
 public class ItemStaff extends Item {
     // 0 = normal. 1 = old. 2 = cherry preview
@@ -41,9 +43,14 @@ public class ItemStaff extends Item {
             var patterns = IXplatAbstractions.INSTANCE.getPatternsSavedInUi(serverPlayer);
             var descs = harness.generateDescs();
 
+            @Nullable CompoundTag debuggedContinuation = null;
+            var debugState = IXplatAbstractions.INSTANCE.getDebugState(serverPlayer);
+            if (debugState != null)
+                debuggedContinuation = debugState.getContinuation().serializeToNBT();
+
             IXplatAbstractions.INSTANCE.sendPacketToPlayer(serverPlayer,
                 new MsgOpenSpellGuiS2C(hand, patterns, descs.getFirst(), descs.getSecond(),
-                    0)); // TODO: Fix!
+                        debuggedContinuation, 0)); // TODO: Fix!
         }
 
         player.awardStat(Stats.ITEM_USED.get(this));
