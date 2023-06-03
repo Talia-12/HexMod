@@ -58,5 +58,8 @@ sealed interface SpellContinuation {
 
             return outList
         }
+
+        @JvmStatic
+        fun numFramesInNbt(nbt: CompoundTag): Int = nbt.getList(TAG_FRAME, Tag.TAG_COMPOUND).size
     }
 }

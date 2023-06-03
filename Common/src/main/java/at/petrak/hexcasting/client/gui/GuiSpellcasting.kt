@@ -46,13 +46,13 @@ class GuiSpellcasting constructor(
     private var cachedStack: List<CompoundTag>,
     private var cachedRavenmind: CompoundTag?,
     private var cachedDebuggedContinuation: CompoundTag?,
-    private var cachedExpandedFrames: List<Boolean>?,
     private var displayDebugger: Boolean,
     private var parenCount: Int,
 ) : Screen("gui.hexcasting.spellcasting".asTranslatedComponent) {
     private var stackDescs: List<FormattedCharSequence> = listOf()
     private var parenDescs: List<FormattedCharSequence> = listOf()
     private var ravenmind: FormattedCharSequence? = null
+    private val cachedExpandedFrames: MutableList<Boolean> = mutableListOf()
 
     private var debuggerDescs: List<FormattedCharSequence> = listOf()
 
@@ -72,8 +72,10 @@ class GuiSpellcasting constructor(
 
     val minDebuggerX: Int get() = maxIotasX + 2 * maxIotasXBuffer
     val minDebuggerY: Int get() = 0
-    val maxDebuggerX: Int get() = minDebuggerX + (this.width - minRavenmindX)
+    val maxDebuggerX: Int get() = minDebuggerX + (this.width - minRavenmindX) - maxDebuggerXBuffer
+    val maxDebuggerXBuffer: Int get() = 5
     val maxDebuggerY: Int get() = this.height
+    val maxDebuggerYBuffer: Int get() = 10
 
     val minGridX: Int get() = 0
     val minGridY: Int get() = 0
@@ -122,7 +124,7 @@ class GuiSpellcasting constructor(
         }
         if (info.isDebugComplete) {
             this.cachedDebuggedContinuation = null
-            this.cachedExpandedFrames = null
+            this.cachedExpandedFrames.clear()
             this.setDebugging(false)
         }
 
@@ -166,7 +168,12 @@ class GuiSpellcasting constructor(
     fun calculateDebuggedContinuationDisplays() {
         val mc = Minecraft.getInstance()
         val width = maxDebuggerX - minDebuggerX
-        this.debuggerDescs = SpellContinuation.getDisplayWithMaxWidth(this.cachedDebuggedContinuation!!, cachedExpandedFrames!!, width, mc.font)
+        this.cachedDebuggedContinuation?.let {
+            while (this.cachedExpandedFrames.size < SpellContinuation.numFramesInNbt(it))
+                this.cachedExpandedFrames.add(true)
+
+            this.debuggerDescs = SpellContinuation.getDisplayWithMaxWidth(it, cachedExpandedFrames, width, mc.font)
+        }
     }
 
     override fun init() {
@@ -198,10 +205,14 @@ class GuiSpellcasting constructor(
         }
 
         // TODO: Debug
-        if (pButton == 2) {
+        if (pButton == 1) {
+            setDebugging(!displayDebugger)
+        } else if (displayDebugger && pButton == 2) {
             IClientXplatAbstractions.INSTANCE.sendPacketToServer(
                     MsgDebuggerActionC2S(this.handOpenedWith)
             )
+        } else if (displayDebugger) {
+            return false
         }
 
         val mx = Mth.clamp(mxOut, 0.0, this.width.toDouble())
@@ -501,6 +512,20 @@ class GuiSpellcasting constructor(
             RenderSystem.setShader { prevShader }
             for (desc in this.stackDescs) {
                 graphics.drawString(font, desc, 5, 7, -1) // TODO: Confirm this works
+                ps.translate(0.0, 10.0, 0.0)
+            }
+        }
+        ps.popPose()
+
+        if (this.displayDebugger && this.debuggerDescs.isNotEmpty()) {
+            val boxHeight = (this.debuggerDescs.size + 1f) * 10f
+            RenderSystem.setShader(GameRenderer::getPositionColorShader)
+            RenderSystem.enableBlend()
+            drawBox(ps, minDebuggerX.toFloat(), minDebuggerY.toFloat(), maxDebuggerX.toFloat() + maxDebuggerXBuffer, min(boxHeight, maxDebuggerY.toFloat() + maxDebuggerYBuffer))
+            ps.translate(minDebuggerX.toDouble(),  minDebuggerY.toDouble(), 1.0)
+            RenderSystem.setShader { prevShader }
+            for (desc in this.debuggerDescs) {
+                font.draw(ps, desc, 5f, 7f, -1)
                 ps.translate(0.0, 10.0, 0.0)
             }
         }
