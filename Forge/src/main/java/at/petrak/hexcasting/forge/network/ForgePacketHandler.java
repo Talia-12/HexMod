@@ -33,12 +33,16 @@ public class ForgePacketHandler {
         // Client -> server
         NETWORK.registerMessage(messageIdx++, MsgNewSpellPatternC2S.class, MsgNewSpellPatternC2S::serialize,
             MsgNewSpellPatternC2S::deserialize, makeServerBoundHandler(MsgNewSpellPatternC2S::handle));
+        NETWORK.registerMessage(messageIdx++, MsgDebuggerActionC2S.class, MsgDebuggerActionC2S::serialize,
+                MsgDebuggerActionC2S::deserialize, makeServerBoundHandler(MsgDebuggerActionC2S::handle));
         NETWORK.registerMessage(messageIdx++, MsgShiftScrollC2S.class, MsgShiftScrollC2S::serialize,
             MsgShiftScrollC2S::deserialize, makeServerBoundHandler(MsgShiftScrollC2S::handle));
 
         // Server -> client
         NETWORK.registerMessage(messageIdx++, MsgNewSpellPatternS2C.class, MsgNewSpellPatternS2C::serialize,
             MsgNewSpellPatternS2C::deserialize, makeClientBoundHandler(MsgNewSpellPatternS2C::handle));
+        NETWORK.registerMessage(messageIdx++, MsgDebuggerActionS2C.class, MsgDebuggerActionS2C::serialize,
+                MsgDebuggerActionS2C::deserialize, makeClientBoundHandler(MsgDebuggerActionS2C::handle));
         NETWORK.registerMessage(messageIdx++, MsgBlinkS2C.class, MsgBlinkS2C::serialize,
             MsgBlinkS2C::deserialize, makeClientBoundHandler(MsgBlinkS2C::handle));
         NETWORK.registerMessage(messageIdx++, MsgSentinelStatusUpdateAck.class, MsgSentinelStatusUpdateAck::serialize,

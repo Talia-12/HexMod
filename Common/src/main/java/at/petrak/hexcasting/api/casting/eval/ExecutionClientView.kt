@@ -20,11 +20,12 @@ data class ExecutionClientView(
  */
 data class DebugClientView(
     val isDebugComplete: Boolean,
+    val didDebugError: Boolean,
     val isStackClear: Boolean,
 
     // These must be tags so the wrapping of the text can happen on the client
     // otherwise we don't know when to stop rendering
     val stackDescs: List<CompoundTag>,
     val ravenmind: CompoundTag?,
-    val debuggedContinuation: CompoundTag
+    val debuggedContinuation: CompoundTag?
 )

@@ -9,6 +9,7 @@ import at.petrak.hexcasting.api.casting.ActionRegistryEntry;
 import at.petrak.hexcasting.api.casting.arithmetic.Arithmetic;
 import at.petrak.hexcasting.api.casting.castables.SpecialHandler;
 import at.petrak.hexcasting.api.casting.eval.ResolvedPattern;
+import at.petrak.hexcasting.api.casting.eval.debug.DebugState;
 import at.petrak.hexcasting.api.casting.eval.sideeffects.EvalSound;
 import at.petrak.hexcasting.api.casting.eval.vm.CastingImage;
 import at.petrak.hexcasting.api.casting.eval.vm.CastingVM;
@@ -107,6 +108,10 @@ public interface IXplatAbstractions {
     @Nullable Sentinel getSentinel(Player player);
 
     CastingVM getStaffcastVM(ServerPlayer player, InteractionHand hand);
+
+    @Nullable DebugState getDebugState(ServerPlayer player);
+
+    void setDebugState(ServerPlayer player, @Nullable DebugState state);
 
     List<ResolvedPattern> getPatternsSavedInUi(ServerPlayer player);
 

@@ -15,6 +15,8 @@ public class FabricPacketHandler {
     public static void init() {
         ServerPlayNetworking.registerGlobalReceiver(MsgNewSpellPatternC2S.ID,
             makeServerBoundHandler(MsgNewSpellPatternC2S::deserialize, MsgNewSpellPatternC2S::handle));
+        ServerPlayNetworking.registerGlobalReceiver(MsgDebuggerActionC2S.ID,
+                makeServerBoundHandler(MsgDebuggerActionC2S::deserialize, MsgDebuggerActionC2S::handle));
         ServerPlayNetworking.registerGlobalReceiver(
             MsgShiftScrollC2S.ID, makeServerBoundHandler(MsgShiftScrollC2S::deserialize, MsgShiftScrollC2S::handle));
     }
@@ -27,6 +29,8 @@ public class FabricPacketHandler {
     public static void initClient() {
         ClientPlayNetworking.registerGlobalReceiver(MsgNewSpellPatternS2C.ID,
             makeClientBoundHandler(MsgNewSpellPatternS2C::deserialize, MsgNewSpellPatternS2C::handle));
+        ClientPlayNetworking.registerGlobalReceiver(MsgDebuggerActionS2C.ID,
+                makeClientBoundHandler(MsgDebuggerActionS2C::deserialize, MsgDebuggerActionS2C::handle));
         ClientPlayNetworking.registerGlobalReceiver(
             MsgBlinkS2C.ID, makeClientBoundHandler(MsgBlinkS2C::deserialize, MsgBlinkS2C::handle));
         ClientPlayNetworking.registerGlobalReceiver(MsgCastParticleS2C.ID,

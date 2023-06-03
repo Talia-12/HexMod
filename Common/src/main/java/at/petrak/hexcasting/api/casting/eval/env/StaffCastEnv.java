@@ -2,9 +2,9 @@ package at.petrak.hexcasting.api.casting.eval.env;
 
 import at.petrak.hexcasting.api.HexAPI;
 import at.petrak.hexcasting.api.casting.ParticleSpray;
-import at.petrak.hexcasting.api.casting.eval.CastResult;
-import at.petrak.hexcasting.api.casting.eval.ExecutionClientView;
-import at.petrak.hexcasting.api.casting.eval.ResolvedPattern;
+import at.petrak.hexcasting.api.casting.eval.*;
+import at.petrak.hexcasting.api.casting.eval.debug.DebugState;
+import at.petrak.hexcasting.api.casting.eval.vm.SpellContinuation;
 import at.petrak.hexcasting.api.casting.iota.PatternIota;
 import at.petrak.hexcasting.api.casting.math.HexCoord;
 import at.petrak.hexcasting.api.mod.HexStatistics;
@@ -133,5 +133,52 @@ public class StaffCastEnv extends PlayerBasedCastEnv {
             new ParticleSpray(sender.position(), new Vec3(0.0, 1.5, 0.0), 0.4, Math.PI / 3, 30)
                 .sprayParticles(sender.serverLevel(), IXplatAbstractions.INSTANCE.getPigment(sender));
         }
+    }
+
+    public static void handleDebugActionOnServer(ServerPlayer sender, MsgDebuggerActionC2S msg) {
+        var vm = IXplatAbstractions.INSTANCE.getStaffcastVM(sender, msg.handUsed());
+        var state = IXplatAbstractions.INSTANCE.getDebugState(sender);
+        ExecutionClientView clientView;
+
+        if (state == null) {
+            var maybeState = vm.initialiseDebugState();
+            if (maybeState.isErr()) {
+                clientView = vm.getExecutionClientView(ResolvedPatternType.ERRORED);
+                var debugView = new DebugClientView(true, true, clientView.isStackClear(),
+                        clientView.getStackDescs(), clientView.getRavenmind(), null);
+                IXplatAbstractions.INSTANCE.sendPacketToPlayer(sender, new MsgDebuggerActionS2C(debugView));
+                return;
+            }
+
+            state = maybeState.unwrap();
+            clientView = vm.getExecutionClientView(ResolvedPatternType.EVALUATED);
+        } else {
+            var continuation = state.getContinuation();
+
+            if (continuation instanceof SpellContinuation.NotDone notDone) {
+                var out = vm.stepContinuationOnce(notDone, sender.getLevel(), state.getTempControllerInfo());
+                state.setContinuation(out.component1());
+                clientView = vm.getExecutionClientView(out.component2());
+            } else {
+                clientView = vm.getExecutionClientView(ResolvedPatternType.EVALUATED);
+            }
+        }
+
+        var debuggingDone = state.getContinuation() instanceof SpellContinuation.Done || state.getTempControllerInfo().getEarlyExit();
+        if (clientView.isStackClear() && debuggingDone) {
+            IXplatAbstractions.INSTANCE.setStaffcastImage(sender, null);
+            IXplatAbstractions.INSTANCE.setPatterns(sender, List.of());
+        } else {
+            IXplatAbstractions.INSTANCE.setStaffcastImage(sender, vm.getImage());
+        }
+        if (debuggingDone)
+            IXplatAbstractions.INSTANCE.setDebugState(sender, null);
+        else
+            IXplatAbstractions.INSTANCE.setDebugState(sender, state);
+
+        var debugView = new DebugClientView(debuggingDone, clientView.getResolutionType() == ResolvedPatternType.ERRORED,
+                clientView.isStackClear(), clientView.getStackDescs(), clientView.getRavenmind(),state.getContinuation().serializeToNBT());
+
+        IXplatAbstractions.INSTANCE.sendPacketToPlayer(sender, new MsgDebuggerActionS2C(debugView));
     }
 }

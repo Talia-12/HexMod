@@ -20,6 +20,7 @@ import at.petrak.hexcasting.client.render.*
 import at.petrak.hexcasting.client.sound.GridSoundInstance
 import at.petrak.hexcasting.common.lib.HexAttributes
 import at.petrak.hexcasting.common.lib.HexSounds
+import at.petrak.hexcasting.common.msgs.MsgDebuggerActionC2S
 import at.petrak.hexcasting.common.msgs.MsgNewSpellPatternC2S
 import at.petrak.hexcasting.xplat.IClientXplatAbstractions
 import com.mojang.blaze3d.systems.RenderSystem
@@ -78,6 +79,7 @@ class GuiSpellcasting constructor(
     val minGridY: Int get() = 0
     val maxGridX: Int get() = this.width
     val maxGridY: Int get() = this.height
+    val gridMargin: Int get() = 15
 
     val minRavenmindX: Int get() = (this.width * (1.0 - RHS_IOTAS_ALLOCATION) - 10).toInt()
     val minRavenmindY: Int get() = 10
@@ -85,7 +87,7 @@ class GuiSpellcasting constructor(
     val maxRavenmindY: Int get() = (30.0 * ADD_L_SCALE).toInt()
 
     fun gridContains(coord: HexCoord): Boolean = gridContains(this.coordToPx(coord))
-    fun gridContains(p: Vec2): Boolean =  minGridX <= p.x && p.x <= maxGridX && minGridY <= p.y && p.y <= maxGridY
+    fun gridContains(p: Vec2): Boolean = (minGridX - gridMargin) <= p.x && p.x <= (maxGridX + gridMargin) && (minGridY - gridMargin) <= p.y && p.y <= (maxGridY + gridMargin)
 
     init {
         for ((pattern, origin) in patterns) {
@@ -197,7 +199,9 @@ class GuiSpellcasting constructor(
 
         // TODO: Debug
         if (pButton == 2) {
-
+            IClientXplatAbstractions.INSTANCE.sendPacketToServer(
+                    MsgDebuggerActionC2S(this.handOpenedWith)
+            )
         }
 
         val mx = Mth.clamp(mxOut, 0.0, this.width.toDouble())

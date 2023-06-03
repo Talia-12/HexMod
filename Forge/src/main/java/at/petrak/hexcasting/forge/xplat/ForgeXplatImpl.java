@@ -8,10 +8,12 @@ import at.petrak.hexcasting.api.casting.ActionRegistryEntry;
 import at.petrak.hexcasting.api.casting.arithmetic.Arithmetic;
 import at.petrak.hexcasting.api.casting.castables.SpecialHandler;
 import at.petrak.hexcasting.api.casting.eval.ResolvedPattern;
+import at.petrak.hexcasting.api.casting.eval.debug.DebugState;
 import at.petrak.hexcasting.api.casting.eval.env.StaffCastEnv;
 import at.petrak.hexcasting.api.casting.eval.sideeffects.EvalSound;
 import at.petrak.hexcasting.api.casting.eval.vm.CastingImage;
 import at.petrak.hexcasting.api.casting.eval.vm.CastingVM;
+import at.petrak.hexcasting.api.casting.eval.vm.SpellContinuation;
 import at.petrak.hexcasting.api.casting.eval.vm.ContinuationFrame;
 import at.petrak.hexcasting.api.casting.iota.IotaType;
 import at.petrak.hexcasting.api.mod.HexTags;
@@ -289,6 +291,28 @@ public class ForgeXplatImpl implements IXplatAbstractions {
         var ctx = new StaffCastEnv(player, hand);
         return new CastingVM(CastingImage.loadFromNbt(player.getPersistentData().getCompound(TAG_HARNESS),
             player.serverLevel()), ctx);
+    }
+
+    @Override
+    public @Nullable DebugState getDebugState(ServerPlayer player) {
+        if (!player.getPersistentData().contains(TAG_DEBUG_CONTINUATION))
+            return null;
+
+        var cont = SpellContinuation.fromNBT(player.getPersistentData().getCompound(TAG_DEBUG_CONTINUATION), player.getLevel());
+        var info = CastingVM.TempControllerInfo.deserializeFromNbt(player.getPersistentData().getCompound(TAG_DEBUG_INFO), player.getLevel());
+        return new DebugState(cont, info);
+    }
+
+    @Override
+    public void setDebugState(ServerPlayer player, @Nullable DebugState state) {
+        if (state == null) {
+            player.getPersistentData().remove(TAG_DEBUG_CONTINUATION);
+            player.getPersistentData().remove(TAG_DEBUG_INFO);
+            return;
+        }
+
+        player.getPersistentData().put(TAG_DEBUG_CONTINUATION, state.getContinuation().serializeToNBT());
+        player.getPersistentData().put(TAG_DEBUG_INFO, state.getTempControllerInfo().serializeToNbt());
     }
 
     @Override
@@ -587,4 +611,6 @@ public class ForgeXplatImpl implements IXplatAbstractions {
 
     public static final String TAG_HARNESS = "hexcasting:spell_harness";
     public static final String TAG_PATTERNS = "hexcasting:spell_patterns";
+    public static final String TAG_DEBUG_CONTINUATION = "hexcasting:debug_continuation";
+    public static final String TAG_DEBUG_INFO = "hexcasting:debug_info";
 }

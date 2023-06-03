@@ -9,6 +9,7 @@ import at.petrak.hexcasting.api.casting.ActionRegistryEntry;
 import at.petrak.hexcasting.api.casting.arithmetic.Arithmetic;
 import at.petrak.hexcasting.api.casting.castables.SpecialHandler;
 import at.petrak.hexcasting.api.casting.eval.ResolvedPattern;
+import at.petrak.hexcasting.api.casting.eval.debug.DebugState;
 import at.petrak.hexcasting.api.casting.eval.sideeffects.EvalSound;
 import at.petrak.hexcasting.api.casting.eval.vm.CastingImage;
 import at.petrak.hexcasting.api.casting.eval.vm.CastingVM;
@@ -220,6 +221,18 @@ public class FabricXplatImpl implements IXplatAbstractions {
     public CastingVM getStaffcastVM(ServerPlayer player, InteractionHand hand) {
         var cc = HexCardinalComponents.STAFFCAST_IMAGE.get(player);
         return cc.getVM(hand);
+    }
+
+    @Override
+    public @Nullable DebugState getDebugState(ServerPlayer player) {
+        var cc = HexCardinalComponents.DEBUBER.get(player);
+        return cc.getState();
+    }
+
+    @Override
+    public void setDebugState(ServerPlayer player, @Nullable DebugState state) {
+        var cc = HexCardinalComponents.DEBUBER.get(player);
+        cc.setState(state);
     }
 
     @Override

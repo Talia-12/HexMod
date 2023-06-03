@@ -48,6 +48,9 @@ public class HexCardinalComponents implements EntityComponentInitializer, ItemCo
     public static final ComponentKey<CCPatterns> PATTERNS = ComponentRegistry.getOrCreate(modLoc("patterns"),
         CCPatterns.class);
 
+    public static final ComponentKey<CCDebugger> DEBUGGER = ComponentRegistry.getOrCreate(modLoc("debugger"),
+            CCDebugger.class);
+
     public static final ComponentKey<CCClientCastingStack> CLIENT_CASTING_STACK = ComponentRegistry.getOrCreate(modLoc("client_casting_stack"),
             CCClientCastingStack.class);
 
@@ -74,6 +77,7 @@ public class HexCardinalComponents implements EntityComponentInitializer, ItemCo
         registry.registerFor(ServerPlayer.class, FLIGHT, CCFlight::new);
         registry.registerFor(ServerPlayer.class, STAFFCAST_IMAGE, CCStaffcastImage::new);
         registry.registerFor(ServerPlayer.class, PATTERNS, CCPatterns::new);
+        registry.registerFor(ServerPlayer.class, DEBUGGER, CCDebugger::new);
 
 
         registry.registerFor(ItemEntity.class, IOTA_HOLDER, wrapItemEntityDelegate(

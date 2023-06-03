@@ -4,7 +4,9 @@ import at.petrak.hexcasting.api.HexAPI
 import at.petrak.hexcasting.api.casting.PatternShapeMatch.*
 import at.petrak.hexcasting.api.casting.SpellList
 import at.petrak.hexcasting.api.casting.eval.*
+import at.petrak.hexcasting.api.casting.eval.debug.DebugState
 import at.petrak.hexcasting.api.casting.eval.sideeffects.OperatorSideEffect
+import at.petrak.hexcasting.api.casting.evaluatable
 import at.petrak.hexcasting.api.casting.eval.vm.CastingImage.ParenthesizedIota
 import at.petrak.hexcasting.api.casting.iota.Iota
 import at.petrak.hexcasting.api.casting.iota.IotaType
@@ -13,6 +15,7 @@ import at.petrak.hexcasting.api.casting.iota.PatternIota
 import at.petrak.hexcasting.api.casting.math.HexDir
 import at.petrak.hexcasting.api.casting.math.HexPattern
 import at.petrak.hexcasting.api.casting.mishaps.*
+import at.petrak.hexcasting.api.misc.Result
 import at.petrak.hexcasting.api.utils.*
 import at.petrak.hexcasting.common.lib.hex.HexEvalSounds
 import net.minecraft.nbt.CompoundTag
@@ -23,6 +26,25 @@ import net.minecraft.server.level.ServerLevel
  * [CastingEnvironment] to affect the world.
  */
 class CastingVM(var image: CastingImage, val env: CastingEnvironment) {
+    /**
+     * Take the top of the stack if it exists, and it is executable create a [SpellContinuation] from it,
+     * then return that.
+     */
+    fun initialiseDebugState(): Result<DebugState, Unit> {
+        val newStack = image.stack.toMutableList()
+        val topIota = newStack.removeLastOrNull() ?: return Result.Err(Unit)
+        val instrs = try {
+            evaluatable(topIota, 0)
+        } catch (m: MishapInvalidIota) { return Result.Err(Unit) }
+
+        val instrsList = instrs.map({ SpellList.LList(0, listOf(it)) }, { it })
+        val frame = FrameEvaluate(instrsList, true)
+
+        image = image.copy(stack = newStack)
+        val cont = SpellContinuation.Done.pushFrame(frame)
+        return Result.Ok(DebugState(cont, TempControllerInfo(false)))
+    }
+
     /**
      * Execute a single iota.
      */
@@ -51,10 +73,7 @@ class CastingVM(var image: CastingImage, val env: CastingEnvironment) {
                 if (lastResolutionType.success) ResolvedPatternType.EVALUATED else ResolvedPatternType.ERRORED
         }
 
-        val (stackDescs, ravenmind) = generateDescs()
-
-        val isStackClear = image.stack.isEmpty() && image.parenCount == 0 && !image.escapeNext && ravenmind == null
-        return ExecutionClientView(isStackClear, lastResolutionType, stackDescs, ravenmind)
+        return getExecutionClientView(lastResolutionType)
     }
 
     fun stepContinuationOnce(continuation: SpellContinuation.NotDone, world: ServerLevel, info: TempControllerInfo): Pair<SpellContinuation, ResolvedPatternType> {
@@ -74,6 +93,13 @@ class CastingVM(var image: CastingImage, val env: CastingEnvironment) {
         performSideEffects(info, image2.sideEffects)
         info.earlyExit = info.earlyExit || !lastResolutionType.success
         return image2.continuation to lastResolutionType
+    }
+
+    fun getExecutionClientView(lastResolutionType: ResolvedPatternType): ExecutionClientView {
+        val (stackDescs, ravenmind) = generateDescs()
+
+        val isStackClear = image.stack.isEmpty() && image.parenCount == 0 && !image.escapeNext && ravenmind == null
+        return ExecutionClientView(isStackClear, lastResolutionType, stackDescs, ravenmind)
     }
 
     /**
@@ -281,7 +307,23 @@ class CastingVM(var image: CastingImage, val env: CastingEnvironment) {
 
     data class TempControllerInfo(
         var earlyExit: Boolean,
-    )
+    ) {
+        fun serializeToNbt(): CompoundTag {
+            val tag = CompoundTag()
+            tag.putBoolean(TAG_EARLY_EXIT, earlyExit)
+            return tag
+        }
+
+        companion object {
+            @JvmStatic
+            fun deserializeFromNbt(tag: CompoundTag, level: ServerLevel): TempControllerInfo {
+                val earlyExit = if (tag.contains(TAG_EARLY_EXIT)) tag.getBoolean(TAG_EARLY_EXIT) else false
+                return TempControllerInfo(earlyExit)
+            }
+
+            const val TAG_EARLY_EXIT = "early_exit"
+        }
+    }
 
     companion object {
         @JvmStatic
