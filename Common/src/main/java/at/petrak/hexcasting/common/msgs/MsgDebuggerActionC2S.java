@@ -15,8 +15,9 @@ public record MsgDebuggerActionC2S(InteractionHand handUsed, DebugType type) imp
     public static final ResourceLocation ID = modLoc("dbg_cs");
 
     public enum DebugType {
-        Step,
-        SkipFrame
+        StepOut,
+        StepOver,
+        StepInto,
     }
 
     @Override

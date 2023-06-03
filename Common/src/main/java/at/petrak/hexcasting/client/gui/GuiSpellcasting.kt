@@ -213,13 +213,17 @@ class GuiSpellcasting constructor(
 
         if (HexKeyMappings.DEBUG_TOGGLE_KEY.matches(keycode, mysteryNumberA)) {
             setDebugging(!displayDebugger)
-        } else if (displayDebugger && HexKeyMappings.DEBUG_STEP_KEY.matches(keycode, mysteryNumberA)) {
+        } else if (displayDebugger && HexKeyMappings.DEBUG_STEP_OUT_KEY.matches(keycode, mysteryNumberA)) {
             IClientXplatAbstractions.INSTANCE.sendPacketToServer(
-                MsgDebuggerActionC2S(this.handOpenedWith, MsgDebuggerActionC2S.DebugType.Step)
+                    MsgDebuggerActionC2S(this.handOpenedWith, MsgDebuggerActionC2S.DebugType.StepOut)
             )
-        } else if (displayDebugger && HexKeyMappings.DEBUG_SKIP_FRAME_KEY.matches(keycode, mysteryNumberA)) {
+        } else if (displayDebugger && HexKeyMappings.DEBUG_STEP_OVER_KEY.matches(keycode, mysteryNumberA)) {
             IClientXplatAbstractions.INSTANCE.sendPacketToServer(
-                MsgDebuggerActionC2S(this.handOpenedWith, MsgDebuggerActionC2S.DebugType.SkipFrame)
+                    MsgDebuggerActionC2S(this.handOpenedWith, MsgDebuggerActionC2S.DebugType.StepOver)
+            )
+        } else if (displayDebugger && HexKeyMappings.DEBUG_STEP_INTO_KEY.matches(keycode, mysteryNumberA)) {
+            IClientXplatAbstractions.INSTANCE.sendPacketToServer(
+                MsgDebuggerActionC2S(this.handOpenedWith, MsgDebuggerActionC2S.DebugType.StepInto)
             )
         } else {
             return false

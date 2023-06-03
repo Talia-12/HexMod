@@ -156,29 +156,38 @@ public class StaffCastEnv extends PlayerBasedCastEnv {
         } else {
             var continuation = state.getContinuation();
 
-            switch (msg.type()) {
-                case Step -> {
-                    if (continuation instanceof SpellContinuation.NotDone notDone) {
-                        var out = vm.stepContinuationOnce(notDone, sender.getLevel(), state.getTempControllerInfo());
-                        state.setContinuation(out.getFirst());
-                        clientView = vm.getExecutionClientView(out.getSecond());
-                    } else {
-                        clientView = vm.getExecutionClientView(ResolvedPatternType.EVALUATED);
-                    }
-                }
-                case SkipFrame -> {
-                    var startingSize = continuation.numFrames();
-                    Pair<SpellContinuation, ResolvedPatternType> out = null;
-                    while (continuation instanceof SpellContinuation.NotDone notDone && continuation.numFrames() >= startingSize) {
-                        out = vm.stepContinuationOnce(notDone, sender.getLevel(), state.getTempControllerInfo());
-                        continuation = out.getFirst();
-                    }
+            if (!(continuation instanceof SpellContinuation.NotDone)) {
+                clientView = vm.getExecutionClientView(ResolvedPatternType.EVALUATED);
+            } else {
+                switch (msg.type()) {
+                    case StepOut -> {
+                        var startingSize = continuation.numFrames();
+                        Pair<SpellContinuation, ResolvedPatternType> out = null;
+                        while (continuation instanceof SpellContinuation.NotDone notDone && continuation.numFrames() >= startingSize) {
+                            out = vm.stepContinuationOnce(notDone, sender.getLevel(), state.getTempControllerInfo());
+                            continuation = out.getFirst();
+                        }
 
-                    if (out != null) {
                         state.setContinuation(continuation);
                         clientView = vm.getExecutionClientView(out.getSecond());
-                    } else {
-                        clientView = vm.getExecutionClientView(ResolvedPatternType.EVALUATED);
+                    }
+                    case StepOver -> {
+                        var startingSize = continuation.numFrames();
+                        var out = vm.stepContinuationOnce((SpellContinuation.NotDone) continuation, sender.getLevel(), state.getTempControllerInfo());
+                        continuation = out.getFirst();
+
+                        while (continuation instanceof SpellContinuation.NotDone notDone && continuation.numFrames() > startingSize) {
+                            out = vm.stepContinuationOnce(notDone, sender.getLevel(), state.getTempControllerInfo());
+                            continuation = out.getFirst();
+                        }
+
+                        state.setContinuation(continuation);
+                        clientView = vm.getExecutionClientView(out.getSecond());
+                    }
+                    case StepInto -> {
+                        var out = vm.stepContinuationOnce((SpellContinuation.NotDone) continuation, sender.getLevel(), state.getTempControllerInfo());
+                        state.setContinuation(out.getFirst());
+                        clientView = vm.getExecutionClientView(out.getSecond());
                     }
                 }
             }
