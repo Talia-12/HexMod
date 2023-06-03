@@ -19,6 +19,7 @@ import at.petrak.hexcasting.client.ktxt.accumulatedScroll
 import at.petrak.hexcasting.client.render.*
 import at.petrak.hexcasting.client.sound.GridSoundInstance
 import at.petrak.hexcasting.common.lib.HexAttributes
+import at.petrak.hexcasting.common.lib.HexKeyMappings
 import at.petrak.hexcasting.common.lib.HexSounds
 import at.petrak.hexcasting.common.msgs.MsgDebuggerActionC2S
 import at.petrak.hexcasting.common.msgs.MsgNewSpellPatternC2S
@@ -205,23 +206,35 @@ class GuiSpellcasting constructor(
         }
     }
 
+    override fun keyPressed(keycode: Int, mysteryNumberA: Int, mysteryNumberB: Int): Boolean {
+        if (super.keyPressed(keycode, mysteryNumberA, mysteryNumberB)) {
+            return true
+        }
+
+        if (HexKeyMappings.DEBUG_TOGGLE_KEY.matches(keycode, mysteryNumberA)) {
+            setDebugging(!displayDebugger)
+        } else if (displayDebugger && HexKeyMappings.DEBUG_STEP_KEY.matches(keycode, mysteryNumberA)) {
+            IClientXplatAbstractions.INSTANCE.sendPacketToServer(
+                MsgDebuggerActionC2S(this.handOpenedWith, MsgDebuggerActionC2S.DebugType.Step)
+            )
+        } else if (displayDebugger && HexKeyMappings.DEBUG_SKIP_FRAME_KEY.matches(keycode, mysteryNumberA)) {
+            IClientXplatAbstractions.INSTANCE.sendPacketToServer(
+                MsgDebuggerActionC2S(this.handOpenedWith, MsgDebuggerActionC2S.DebugType.SkipFrame)
+            )
+        } else {
+            return false
+        }
+
+        return true // returns true if any of the keys pressed did things
+    }
+
     override fun mouseClicked(mxOut: Double, myOut: Double, pButton: Int): Boolean {
         if (super.mouseClicked(mxOut, myOut, pButton)) {
             return true
         }
 
-        // TODO: Debug
-        if (pButton == 1) {
-            setDebugging(!displayDebugger)
-        } else if (displayDebugger && pButton == 2) {
-            IClientXplatAbstractions.INSTANCE.sendPacketToServer(
-                    MsgDebuggerActionC2S(this.handOpenedWith)
-            )
-        }
-
-        if (displayDebugger) {
+        if (displayDebugger)
             return false
-        }
 
         val mx = Mth.clamp(mxOut, 0.0, this.width.toDouble())
         val my = Mth.clamp(myOut, 0.0, this.height.toDouble())

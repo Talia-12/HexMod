@@ -11,8 +11,13 @@ import net.minecraft.world.InteractionHand;
 
 import static at.petrak.hexcasting.api.HexAPI.modLoc;
 
-public record MsgDebuggerActionC2S(InteractionHand handUsed) implements IMessage {
+public record MsgDebuggerActionC2S(InteractionHand handUsed, DebugType type) implements IMessage {
     public static final ResourceLocation ID = modLoc("dbg_cs");
+
+    public enum DebugType {
+        Step,
+        SkipFrame
+    }
 
     @Override
     public ResourceLocation getFabricId() {
@@ -22,14 +27,16 @@ public record MsgDebuggerActionC2S(InteractionHand handUsed) implements IMessage
     public static MsgDebuggerActionC2S deserialize(ByteBuf buffer) {
         var buf = new FriendlyByteBuf(buffer);
         var hand = buf.readEnum(InteractionHand.class);
+        var type = buf.readEnum(DebugType.class);
 
-        return new MsgDebuggerActionC2S(hand);
+        return new MsgDebuggerActionC2S(hand, type);
     }
 
 
     @Override
     public void serialize(FriendlyByteBuf buf) {
         buf.writeEnum(handUsed);
+        buf.writeEnum(type);
     }
 
     public void handle(MinecraftServer server, ServerPlayer sender) {

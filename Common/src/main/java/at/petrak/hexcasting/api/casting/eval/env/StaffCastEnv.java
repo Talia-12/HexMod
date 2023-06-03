@@ -11,6 +11,7 @@ import at.petrak.hexcasting.api.mod.HexStatistics;
 import at.petrak.hexcasting.api.pigment.FrozenPigment;
 import at.petrak.hexcasting.common.msgs.*;
 import at.petrak.hexcasting.xplat.IXplatAbstractions;
+import kotlin.Pair;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
@@ -138,7 +139,7 @@ public class StaffCastEnv extends PlayerBasedCastEnv {
     public static void handleDebugActionOnServer(ServerPlayer sender, MsgDebuggerActionC2S msg) {
         var vm = IXplatAbstractions.INSTANCE.getStaffcastVM(sender, msg.handUsed());
         var state = IXplatAbstractions.INSTANCE.getDebugState(sender);
-        ExecutionClientView clientView;
+        ExecutionClientView clientView = null;
 
         if (state == null) {
             var maybeState = vm.initialiseDebugState();
@@ -155,12 +156,31 @@ public class StaffCastEnv extends PlayerBasedCastEnv {
         } else {
             var continuation = state.getContinuation();
 
-            if (continuation instanceof SpellContinuation.NotDone notDone) {
-                var out = vm.stepContinuationOnce(notDone, sender.getLevel(), state.getTempControllerInfo());
-                state.setContinuation(out.component1());
-                clientView = vm.getExecutionClientView(out.component2());
-            } else {
-                clientView = vm.getExecutionClientView(ResolvedPatternType.EVALUATED);
+            switch (msg.type()) {
+                case Step -> {
+                    if (continuation instanceof SpellContinuation.NotDone notDone) {
+                        var out = vm.stepContinuationOnce(notDone, sender.getLevel(), state.getTempControllerInfo());
+                        state.setContinuation(out.getFirst());
+                        clientView = vm.getExecutionClientView(out.getSecond());
+                    } else {
+                        clientView = vm.getExecutionClientView(ResolvedPatternType.EVALUATED);
+                    }
+                }
+                case SkipFrame -> {
+                    var startingSize = continuation.numFrames();
+                    Pair<SpellContinuation, ResolvedPatternType> out = null;
+                    while (continuation instanceof SpellContinuation.NotDone notDone && continuation.numFrames() >= startingSize) {
+                        out = vm.stepContinuationOnce(notDone, sender.getLevel(), state.getTempControllerInfo());
+                        continuation = out.getFirst();
+                    }
+
+                    if (out != null) {
+                        state.setContinuation(continuation);
+                        clientView = vm.getExecutionClientView(out.getSecond());
+                    } else {
+                        clientView = vm.getExecutionClientView(ResolvedPatternType.EVALUATED);
+                    }
+                }
             }
         }
 

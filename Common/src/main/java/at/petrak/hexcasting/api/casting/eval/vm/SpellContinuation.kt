@@ -19,6 +19,18 @@ sealed interface SpellContinuation {
 
     fun pushFrame(frame: ContinuationFrame): SpellContinuation = NotDone(frame, this)
 
+    fun numFrames(): Int {
+        var numFrames = 0
+        var self = this
+
+        while (self is NotDone) {
+            numFrames++
+            self = self.next
+        }
+
+        return numFrames
+    }
+
     fun serializeToNBT() = NBTBuilder {
         TAG_FRAME %= list(getNBTFrames())
     }

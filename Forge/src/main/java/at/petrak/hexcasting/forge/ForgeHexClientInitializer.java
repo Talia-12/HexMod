@@ -9,6 +9,7 @@ import at.petrak.hexcasting.client.model.HexModelLayers;
 import at.petrak.hexcasting.client.render.HexAdditionalRenderers;
 import at.petrak.hexcasting.client.render.shader.HexShaders;
 import at.petrak.hexcasting.common.casting.PatternRegistryManifest;
+import at.petrak.hexcasting.common.lib.HexKeyMappings;
 import at.petrak.hexcasting.common.lib.HexParticles;
 import at.petrak.hexcasting.common.misc.PatternTooltip;
 import at.petrak.hexcasting.interop.HexInterop;
@@ -26,8 +27,10 @@ import net.minecraft.core.particles.ParticleType;
 import net.minecraftforge.client.event.*;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import thedarkcolour.kotlinforforge.KotlinModLoadingContext;
 
 import java.io.IOException;
 import java.util.function.Function;
@@ -49,6 +52,7 @@ public class ForgeHexClientInitializer {
         });
 
         var evBus = MinecraftForge.EVENT_BUS;
+        var modBus = getModEventBus();
 
         evBus.addListener((ClientPlayerNetworkEvent.LoggingIn e) ->
             PatternRegistryManifest.processRegistry(null));
@@ -59,9 +63,7 @@ public class ForgeHexClientInitializer {
             }
         });
 
-        evBus.addListener((RenderGuiEvent.Post e) -> {
-            HexAdditionalRenderers.overlayGui(e.getGuiGraphics(), e.getPartialTick());
-        });
+        evBus.addListener((RenderGuiEvent.Post e) -> HexAdditionalRenderers.overlayGui(e.getGuiGraphics(), e.getPartialTick()));
 
 
         evBus.addListener((TickEvent.RenderTickEvent e) -> {
@@ -81,6 +83,8 @@ public class ForgeHexClientInitializer {
             var cancel = ShiftScrollListener.onScrollInGameplay(e.getScrollDelta());
             e.setCanceled(cancel);
         });
+
+        modBus.addListener((RegisterKeyMappingsEvent e) -> HexKeyMappings.registerMappings((m, r) -> e.register(m)));
 
         HexInterop.clientInit();
     }
@@ -135,5 +139,10 @@ public class ForgeHexClientInitializer {
 
             skin.addLayer(new AltioraLayer<>(skin, evt.getEntityModels()));
         });
+    }
+
+    // aaaauughhg
+    private static IEventBus getModEventBus() {
+        return KotlinModLoadingContext.Companion.get().getKEventBus();
     }
 }
