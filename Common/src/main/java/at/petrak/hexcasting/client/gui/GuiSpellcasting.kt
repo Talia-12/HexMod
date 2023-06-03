@@ -549,7 +549,7 @@ class GuiSpellcasting constructor(
 
         ps.pushPose()
 
-        remainingVerticalSpace = this.height.toDouble()
+        remainingVerticalSpace = this.height.toDouble() - 10.0
         if (this.ravenmind != null) {
             val boxHeight = 15f
             ps.translate(minRavenmindX.toDouble() + maxDebuggerXBuffer, minRavenmindY.toDouble(), 0.0)
@@ -585,7 +585,7 @@ class GuiSpellcasting constructor(
                 ps.translate(minDebuggerX.toDouble() + maxDebuggerXBuffer,  minDebuggerY.toDouble(), 0.0)
                 remainingVerticalSpace -= minDebuggerY
             }
-            drawBox(ps, 0.0f, 0.0f, maxDebuggerWidth.toFloat(), maxDebuggerHeight.toFloat() + maxDebuggerYBuffer)
+            drawBox(ps, 0.0f, 0.0f, maxDebuggerWidth.toFloat(), min(maxDebuggerHeight.toFloat() + maxDebuggerYBuffer, remainingVerticalSpace.toFloat()))
 
             ps.translate(5.0, 5.0, 1.0)
             remainingVerticalSpace -= 5.0

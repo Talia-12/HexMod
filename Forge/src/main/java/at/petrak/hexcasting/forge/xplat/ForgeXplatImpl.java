@@ -331,6 +331,8 @@ public class ForgeXplatImpl implements IXplatAbstractions {
     public void clearCastingData(ServerPlayer player) {
         player.getPersistentData().remove(TAG_HARNESS);
         player.getPersistentData().remove(TAG_PATTERNS);
+        player.getPersistentData().remove(TAG_DEBUG_CONTINUATION);
+        player.getPersistentData().remove(TAG_DEBUG_INFO);
     }
 
     @Override

@@ -245,6 +245,7 @@ public class FabricXplatImpl implements IXplatAbstractions {
     public void clearCastingData(ServerPlayer player) {
         this.setStaffcastImage(player, null);
         this.setPatterns(player, List.of());
+        this.setDebugState(player, null);
     }
 
     @Override
