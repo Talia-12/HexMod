@@ -225,13 +225,13 @@ public class FabricXplatImpl implements IXplatAbstractions {
 
     @Override
     public @Nullable DebugState getDebugState(ServerPlayer player) {
-        var cc = HexCardinalComponents.DEBUBER.get(player);
+        var cc = HexCardinalComponents.DEBUGGER.get(player);
         return cc.getState();
     }
 
     @Override
     public void setDebugState(ServerPlayer player, @Nullable DebugState state) {
-        var cc = HexCardinalComponents.DEBUBER.get(player);
+        var cc = HexCardinalComponents.DEBUGGER.get(player);
         cc.setState(state);
     }
 

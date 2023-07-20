@@ -164,20 +164,22 @@ public class StaffCastEnv extends PlayerBasedCastEnv {
                         var startingSize = continuation.numFrames();
                         Pair<SpellContinuation, ResolvedPatternType> out = null;
                         while (continuation instanceof SpellContinuation.NotDone notDone && continuation.numFrames() >= startingSize) {
-                            out = vm.stepContinuationOnce(notDone, sender.getLevel(), state.getTempControllerInfo());
+                            out = vm.stepContinuationOnce(notDone, sender.serverLevel(), state.getTempControllerInfo());
                             continuation = out.getFirst();
                         }
+                        // must be non-null since if continuation wasn't NotDone then that would have been caught by the wrapping if-statement
+                        assert out != null;
 
                         state.setContinuation(continuation);
                         clientView = vm.getExecutionClientView(out.getSecond());
                     }
                     case StepOver -> {
                         var startingSize = continuation.numFrames();
-                        var out = vm.stepContinuationOnce((SpellContinuation.NotDone) continuation, sender.getLevel(), state.getTempControllerInfo());
+                        var out = vm.stepContinuationOnce((SpellContinuation.NotDone) continuation, sender.serverLevel(), state.getTempControllerInfo());
                         continuation = out.getFirst();
 
                         while (continuation instanceof SpellContinuation.NotDone notDone && continuation.numFrames() > startingSize) {
-                            out = vm.stepContinuationOnce(notDone, sender.getLevel(), state.getTempControllerInfo());
+                            out = vm.stepContinuationOnce(notDone, sender.serverLevel(), state.getTempControllerInfo());
                             continuation = out.getFirst();
                         }
 
@@ -185,7 +187,7 @@ public class StaffCastEnv extends PlayerBasedCastEnv {
                         clientView = vm.getExecutionClientView(out.getSecond());
                     }
                     case StepInto -> {
-                        var out = vm.stepContinuationOnce((SpellContinuation.NotDone) continuation, sender.getLevel(), state.getTempControllerInfo());
+                        var out = vm.stepContinuationOnce((SpellContinuation.NotDone) continuation, sender.serverLevel(), state.getTempControllerInfo());
                         state.setContinuation(out.getFirst());
                         clientView = vm.getExecutionClientView(out.getSecond());
                     }
@@ -214,7 +216,7 @@ public class StaffCastEnv extends PlayerBasedCastEnv {
             // Somehow we lost spraying particles on each new pattern, so do it here
             // this also nicely prevents particle spam on trinkets
             new ParticleSpray(sender.position(), new Vec3(0.0, 1.5, 0.0), 0.4, Math.PI / 3, 30)
-                    .sprayParticles(sender.getLevel(), IXplatAbstractions.INSTANCE.getColorizer(sender));
+                    .sprayParticles(sender.serverLevel(), IXplatAbstractions.INSTANCE.getPigment(sender));
         }
     }
 }

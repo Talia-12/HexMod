@@ -24,8 +24,8 @@ public class CCDebugger implements Component {
         if (lazyLoadedContinuation.isEmpty())
             return null;
 
-        var cont = SpellContinuation.fromNBT(lazyLoadedContinuation, owner.getLevel());
-        var info = CastingVM.TempControllerInfo.deserializeFromNbt(lazyLoadedInfo, owner.getLevel());
+        var cont = SpellContinuation.fromNBT(lazyLoadedContinuation, owner.serverLevel());
+        var info = CastingVM.TempControllerInfo.deserializeFromNbt(lazyLoadedInfo, owner.serverLevel());
         return new DebugState(cont, info);
     }
 

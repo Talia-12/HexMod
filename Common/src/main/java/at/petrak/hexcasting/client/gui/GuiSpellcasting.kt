@@ -415,7 +415,7 @@ class GuiSpellcasting constructor(
         this.ambianceSoundInstance?.mousePosX = pMouseX / this.width.toDouble()
         this.ambianceSoundInstance?.mousePosY = pMouseX / this.width.toDouble()
 
-        val ps = graphics.pose() // TODO: Determine if this is still necessary.
+        val ps = graphics.pose()
 
         val mat = ps.last().pose()
         val prevShader = RenderSystem.getShader()
@@ -530,7 +530,7 @@ class GuiSpellcasting constructor(
             val color = 0x00_ffffff or (opacity shl 24)
             RenderSystem.setShader { prevShader }
             for (desc in this.parenDescs) {
-                graphics.drawString(font, desc, 5, 7, -1) // TODO: Confirm this works
+                graphics.drawString(font, desc, 5, 7, -1)
                 ps.translate(0.0, 10.0, 0.0)
                 remainingVerticalSpace -= 10.0
             }
@@ -555,7 +555,7 @@ class GuiSpellcasting constructor(
             ps.translate(0.0, 0.0, 1.0)
             RenderSystem.setShader { prevShader }
             for (desc in this.stackDescs) {
-                font.draw(ps, desc, 5f, 7f, -1) // TODO: only draw if remaining vertical space
+                graphics.drawString(font, desc, 5, 7, -1)
                 ps.translate(0.0, 10.0, 0.0)
                 remainingVerticalSpace -= 10.0
                 if (remainingVerticalSpace < 10.0)
@@ -587,7 +587,7 @@ class GuiSpellcasting constructor(
             val color = 0x00_ffffff or (opacity shl 24)
 
             RenderSystem.setShader { prevShader }
-            graphics.drawString(font, this.ravenmind!!, 0, 0, color) // TODO: Confirm this works
+            graphics.drawString(font, this.ravenmind!!, 0, 0, color)
 
             ps.popPose()
 
@@ -609,7 +609,7 @@ class GuiSpellcasting constructor(
 
             RenderSystem.setShader { prevShader }
             for (desc in this.debuggerDescs) {
-                graphics.drawString(font, desc, 5, 7, -1) // TODO: Confirm this works
+                graphics.drawString(font, desc, 5, 7, -1)
                 ps.translate(0.0, 10.0, 0.0)
                 remainingVerticalSpace -= 10.0
                 if (remainingVerticalSpace < 10.0)

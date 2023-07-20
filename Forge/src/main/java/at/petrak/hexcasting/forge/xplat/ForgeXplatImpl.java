@@ -298,8 +298,8 @@ public class ForgeXplatImpl implements IXplatAbstractions {
         if (!player.getPersistentData().contains(TAG_DEBUG_CONTINUATION))
             return null;
 
-        var cont = SpellContinuation.fromNBT(player.getPersistentData().getCompound(TAG_DEBUG_CONTINUATION), player.getLevel());
-        var info = CastingVM.TempControllerInfo.deserializeFromNbt(player.getPersistentData().getCompound(TAG_DEBUG_INFO), player.getLevel());
+        var cont = SpellContinuation.fromNBT(player.getPersistentData().getCompound(TAG_DEBUG_CONTINUATION), player.serverLevel());
+        var info = CastingVM.TempControllerInfo.deserializeFromNbt(player.getPersistentData().getCompound(TAG_DEBUG_INFO), player.serverLevel());
         return new DebugState(cont, info);
     }
 
