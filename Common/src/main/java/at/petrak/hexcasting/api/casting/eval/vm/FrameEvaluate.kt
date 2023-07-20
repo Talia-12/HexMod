@@ -3,15 +3,15 @@ package at.petrak.hexcasting.api.casting.eval.vm
 import at.petrak.hexcasting.api.casting.SpellList
 import at.petrak.hexcasting.api.casting.eval.CastResult
 import at.petrak.hexcasting.api.casting.eval.ResolvedPatternType
+import at.petrak.hexcasting.api.casting.eval.vm.ContinuationFrame.Companion.listify
 import at.petrak.hexcasting.api.casting.iota.Iota
 import at.petrak.hexcasting.api.casting.iota.ListIota
-import at.petrak.hexcasting.api.utils.NBTBuilder
-import at.petrak.hexcasting.api.utils.getList
-import at.petrak.hexcasting.api.utils.serializeToNBT
+import at.petrak.hexcasting.api.utils.*
 import at.petrak.hexcasting.common.lib.hex.HexEvalSounds
 import at.petrak.hexcasting.common.lib.hex.HexIotaTypes
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.nbt.Tag
+import net.minecraft.network.chat.Component
 import net.minecraft.server.level.ServerLevel
 
 /**
@@ -69,6 +69,10 @@ data class FrameEvaluate(val list: SpellList, val isMetacasting: Boolean) : Cont
                     tag.getBoolean("isMetacasting"))
             }
 
+            override fun displayOneLine(tag: CompoundTag) = "evaluate".asTextComponent
+
+            override fun displayExpanded(tag: CompoundTag): List<List<Component?>> = listify("", tag.getList("patterns", Tag.TAG_COMPOUND))
+                    .map { listOf(it) }
         }
     }
 }

@@ -3,17 +3,17 @@ package at.petrak.hexcasting.api.casting.eval.vm
 import at.petrak.hexcasting.api.casting.SpellList
 import at.petrak.hexcasting.api.casting.eval.CastResult
 import at.petrak.hexcasting.api.casting.eval.ResolvedPatternType
+import at.petrak.hexcasting.api.casting.eval.vm.ContinuationFrame.Companion.listify
 import at.petrak.hexcasting.api.casting.iota.Iota
 import at.petrak.hexcasting.api.casting.iota.ListIota
-import at.petrak.hexcasting.api.utils.NBTBuilder
-import at.petrak.hexcasting.api.utils.getList
-import at.petrak.hexcasting.api.utils.hasList
-import at.petrak.hexcasting.api.utils.serializeToNBT
+import at.petrak.hexcasting.api.utils.*
 import at.petrak.hexcasting.common.lib.hex.HexEvalSounds
 import at.petrak.hexcasting.common.lib.hex.HexIotaTypes
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.nbt.Tag
+import net.minecraft.network.chat.Component
 import net.minecraft.server.level.ServerLevel
+import kotlin.math.max
 
 /**
  * A frame representing all the state for a Thoth evaluation.
@@ -110,6 +110,27 @@ data class FrameForEach(
                 )
             }
 
+            override fun displayOneLine(tag: CompoundTag) = "foreach".asTextComponent
+
+            override fun displayExpanded(tag: CompoundTag): List<List<Component?>> {
+                val code = listify("Code",        tag.getList("code",        Tag.TAG_COMPOUND))
+                val data = listify("Data",        tag.getList("data",        Tag.TAG_COMPOUND))
+                val base = listify("Base Stack",  tag.getList("base",        Tag.TAG_COMPOUND))
+                val acc  = listify("Accumulator", tag.getList("accumulator", Tag.TAG_COMPOUND))
+
+                val out = mutableListOf<List<Component?>>()
+
+                for (i in 0 until max(max(code.size, data.size), max(base.size, acc.size))) {
+                    val row = mutableListOf<Component?>()
+                    code.getOrNull(i).let { row.add(it) }
+                    data.getOrNull(i).let { row.add(it) }
+                    base.getOrNull(i).let { row.add(it) }
+                    acc .getOrNull(i).let { row.add(it) }
+                    out.add(row)
+                }
+
+                return out
+            }
         }
     }
 }

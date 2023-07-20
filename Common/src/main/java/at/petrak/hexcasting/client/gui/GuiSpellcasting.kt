@@ -55,7 +55,7 @@ class GuiSpellcasting constructor(
     private var ravenmind: FormattedCharSequence? = null
     private val cachedExpandedFrames: MutableList<Boolean> = mutableListOf()
 
-    private var debuggerDescs: List<FormattedCharSequence> = listOf()
+    private var debuggerDescs: List<List<Pair<FormattedCharSequence?, Int>>> = listOf()
 
     private var drawState: PatternDrawState = PatternDrawState.BetweenPatterns
     private val usedSpots: MutableSet<HexCoord> = HashSet()
@@ -179,7 +179,7 @@ class GuiSpellcasting constructor(
             while (this.cachedExpandedFrames.size < SpellContinuation.numFramesInNbt(it))
                 this.cachedExpandedFrames.add(true)
 
-            this.debuggerDescs = SpellContinuation.getDisplayWithMaxWidth(it, cachedExpandedFrames, maxDebuggerWidth, mc.font)
+            this.debuggerDescs = SpellContinuation.getDisplayWithMaxWidth(it, cachedExpandedFrames, maxDebuggerWidth, PXLS_BETWEEN_COLUMNS, mc.font)
         }
     }
 
@@ -610,7 +610,12 @@ class GuiSpellcasting constructor(
 
             RenderSystem.setShader { prevShader }
             for (desc in this.debuggerDescs) {
-                graphics.drawString(font, desc, 5, 7, -1)
+                var curX = 0
+                for ((col, colWidth) in desc) {
+                    if (col != null)
+                        graphics.drawString(font, col, 5 + curX, 7, -1)
+                    curX += colWidth
+                }
                 ps.translate(0.0, 10.0, 0.0)
                 remainingVerticalSpace -= 10.0
                 if (remainingVerticalSpace < 10.0)
@@ -657,6 +662,8 @@ class GuiSpellcasting constructor(
     companion object {
         const val ADD_L_SCALE = 1.5f
         const val RHS_IOTAS_ALLOCATION = 0.15 * ADD_L_SCALE
+
+        const val PXLS_BETWEEN_COLUMNS = 7
 
         fun drawBox(ps: PoseStack, x: Float, y: Float, w: Float, h: Float, leftMargin: Float = 2.5f) {
             RenderSystem.setShader(GameRenderer::getPositionColorShader)

@@ -59,13 +59,13 @@ sealed interface SpellContinuation {
         }
 
         @JvmStatic
-        fun getDisplayWithMaxWidth(nbt: CompoundTag, expanded: List<Boolean>, width: Int, font: Font): List<FormattedCharSequence> {
-            val outList = mutableListOf<FormattedCharSequence>()
+        fun getDisplayWithMaxWidth(nbt: CompoundTag, expanded: List<Boolean>, width: Int, betweenColumnGap: Int, font: Font): List<List<Pair<FormattedCharSequence?, Int>>> {
+            val outList = mutableListOf<List<Pair<FormattedCharSequence?, Int>>>()
 
             val frames = nbt.getList(TAG_FRAME, Tag.TAG_COMPOUND)
             for ((frame, expanded) in (frames.zip(expanded))) {
-                if (expanded) outList.addAll(ContinuationFrame.displayExpanded(frame.asCompound, width, font))
-                else outList.add(ContinuationFrame.displayOneLine(frame.asCompound, width, font))
+                if (expanded) outList.addAll(ContinuationFrame.displayExpanded(frame.asCompound, width, betweenColumnGap, font))
+                else outList.add(listOf(ContinuationFrame.displayOneLine(frame.asCompound, width, font) to 1))
             }
 
             return outList

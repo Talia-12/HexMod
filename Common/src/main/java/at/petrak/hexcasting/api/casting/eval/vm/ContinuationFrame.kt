@@ -3,21 +3,19 @@ package at.petrak.hexcasting.api.casting.eval.vm
 import at.petrak.hexcasting.api.casting.SpellList
 import at.petrak.hexcasting.api.casting.eval.CastResult
 import at.petrak.hexcasting.api.casting.iota.Iota
-import at.petrak.hexcasting.common.lib.hex.HexContinuationTypes
 import at.petrak.hexcasting.api.casting.iota.IotaType
 import at.petrak.hexcasting.api.utils.asCompound
-import at.petrak.hexcasting.api.utils.asTextComponent
-import at.petrak.hexcasting.api.utils.getList
-import at.petrak.hexcasting.api.utils.hasList
-import at.petrak.hexcasting.common.lib.hex.HexIotaTypes
+import at.petrak.hexcasting.common.lib.hex.HexContinuationTypes
 import net.minecraft.ChatFormatting
 import net.minecraft.client.gui.Font
 import net.minecraft.nbt.CompoundTag
+import net.minecraft.nbt.ListTag
 import net.minecraft.nbt.Tag
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.network.chat.Component
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.util.FormattedCharSequence
+import kotlin.math.max
 
 /**
  * A single frame of evaluation during the execution of a spell.
@@ -60,7 +58,21 @@ interface ContinuationFrame {
     val type: Type<*>
 
     interface Type<U : ContinuationFrame> {
+        /**
+         * Undo the serialization done by [serializeToNBT].
+         */
         fun deserializeFromNBT(tag: CompoundTag, world: ServerLevel): U?
+
+        /**
+         * Return a single-line representation of this ContinuationFrame.
+         */
+        fun displayOneLine(tag: CompoundTag): Component?
+
+        /**
+         * Return a multi-line, multi-column representation of this ContinuationFrame.
+         * Each inner list is one row of text, the outer list contains all the rows.
+         */
+        fun displayExpanded(tag: CompoundTag): List<List<Component?>>
     }
 
     companion object {
@@ -115,8 +127,13 @@ interface ContinuationFrame {
             return HexContinuationTypes.REGISTRY[typeLoc]
         }
 
+        /**
+         * Returns text to display for when a frame is collapsed to a single line.
+         */
         fun displayOneLine(tag: CompoundTag, width: Int, font: Font): FormattedCharSequence {
-            val display = display(tag)
+            val display = getTypeFromTag(tag)?.displayOneLine(tag.getCompound(HexContinuationTypes.KEY_DATA))
+                ?: Component.translatable("hexcasting.spelldata.unknown").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC)
+
             val splitted = font.split(display, width - font.width("..."))
             return if (splitted.isEmpty()) FormattedCharSequence.EMPTY else if (splitted.size == 1) splitted[0] else {
                 val first = splitted[0]
@@ -126,39 +143,39 @@ interface ContinuationFrame {
         }
 
         @JvmStatic
-        fun display(tag: CompoundTag): Component {
-            return when (tag.getString("type")) {
-                "evaluate" ->  "evaluate".asTextComponent
-                "end" -> "end".asTextComponent
-                "foreach" -> "foreach".asTextComponent
-                else -> Component.translatable("hexcasting.spelldata.unknown").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC)
-            }
+        fun displayExpanded(tag: CompoundTag, width: Int, betweenColumnGap: Int, font: Font): List<List<Pair<FormattedCharSequence?, Int>>> {
+            val displays = getTypeFromTag(tag)?.displayExpanded(tag.getCompound(HexContinuationTypes.KEY_DATA))
+                ?: listOf(listOf(Component.translatable("hexcasting.spelldata.unknown").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC)))
+
+            val numColumns = displays.foldRight(1) { row, cur -> max(row.size, cur) }
+            val columnWidth = (width - betweenColumnGap * (numColumns - 1)) / numColumns
+            val columnWidthWithOffset = columnWidth + betweenColumnGap
+
+            return displays
+                .map { row -> row.map {
+                    if (it == null)
+                        return@map it to columnWidthWithOffset
+                    val split = font.split(it, columnWidth - font.width("..."))
+                    if (split.isEmpty()) FormattedCharSequence.EMPTY to columnWidthWithOffset
+                    else if (split.size == 1) split[0] to columnWidthWithOffset
+                    else {
+                        val first = split[0]
+                        FormattedCharSequence.fromPair(first, Component.literal("...")
+                            .withStyle(ChatFormatting.GRAY).visualOrderText) to columnWidthWithOffset
+                    }
+                } }
         }
 
-        @JvmStatic
-        fun displayExpanded(tag: CompoundTag, width: Int, font: Font): List<FormattedCharSequence> {
-            val displays = displayExpanded(tag)
-            val splitted = displays.map { font.split(it, width - font.width("...")) }.map {
-                if (it.isEmpty()) FormattedCharSequence.EMPTY else if (it.size == 1) it[0] else {
-                    val first = it[0]
-                    FormattedCharSequence.fromPair(first, Component.literal("...").withStyle(ChatFormatting.GRAY).visualOrderText)
-                }
-            }
-            return splitted
-        }
+        fun listify(prefix: String, toWrap: ListTag?): List<Component>
+            = listify(prefix, toWrap?.map { IotaType.getDisplay(it.asCompound) })
 
-        @JvmStatic
-        fun displayExpanded(tag: CompoundTag): List<Component> {
-            return when (tag.getString("type")) {
-                "evaluate" -> listOf(Component.literal("Evaluate ["))
-                                .plus(tag.getList("patterns", Tag.TAG_COMPOUND).map { IotaType.getDisplay(it.asCompound) })
-                                .plus(Component.literal("]"))
-                "end" -> listOf(Component.literal("End"))
-                "foreach" -> listOf(Component.literal("Foreach ["))
-                        .plus(tag.getList("code", Tag.TAG_COMPOUND).map { IotaType.getDisplay(it.asCompound) })
-                        .plus(Component.literal("]"))
-                else -> listOf(Component.translatable("hexcasting.spelldata.unknown").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC))
-            }
+        fun listify(prefix: String, toWrap: List<Component>?): List<Component> {
+            if (toWrap == null || toWrap.size == 0)
+                return listOf(Component.translatable(prefix).append(" [ ]"))
+
+            return listOf(Component.translatable(prefix).append(" ["))
+                .plus(toWrap)
+                .plus(Component.literal("]"))
         }
     }
 }

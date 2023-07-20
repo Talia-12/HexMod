@@ -4,9 +4,10 @@ import at.petrak.hexcasting.api.casting.eval.CastResult
 import at.petrak.hexcasting.api.casting.eval.ResolvedPatternType
 import at.petrak.hexcasting.api.casting.iota.Iota
 import at.petrak.hexcasting.api.casting.iota.NullIota
-import at.petrak.hexcasting.api.utils.NBTBuilder
+import at.petrak.hexcasting.api.utils.asTextComponent
 import at.petrak.hexcasting.common.lib.hex.HexEvalSounds
 import net.minecraft.nbt.CompoundTag
+import net.minecraft.network.chat.Component
 import net.minecraft.server.level.ServerLevel
 
 /**
@@ -40,6 +41,9 @@ object FrameFinishEval : ContinuationFrame {
     @JvmField
     val TYPE: ContinuationFrame.Type<FrameFinishEval> = object : ContinuationFrame.Type<FrameFinishEval> {
         override fun deserializeFromNBT(tag: CompoundTag, world: ServerLevel) = FrameFinishEval
+        override fun displayOneLine(tag: CompoundTag) = "end".asTextComponent
+
+        override fun displayExpanded(tag: CompoundTag): List<List<Component?>> = listOf(listOf(Component.literal("End")))
     }
 
     override val type = TYPE
