@@ -150,11 +150,11 @@ interface ContinuationFrame {
         @JvmStatic
         fun displayExpanded(tag: CompoundTag): List<Component> {
             return when (tag.getString("type")) {
-                "evaluate" -> listOf(Component.literal("["))
+                "evaluate" -> listOf(Component.literal("Evaluate ["))
                                 .plus(tag.getList("patterns", Tag.TAG_COMPOUND).map { IotaType.getDisplay(it.asCompound) })
                                 .plus(Component.literal("]"))
                 "end" -> listOf(Component.literal("End"))
-                "foreach" -> listOf(Component.literal("["))
+                "foreach" -> listOf(Component.literal("Foreach ["))
                         .plus(tag.getList("code", Tag.TAG_COMPOUND).map { IotaType.getDisplay(it.asCompound) })
                         .plus(Component.literal("]"))
                 else -> listOf(Component.translatable("hexcasting.spelldata.unknown").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC))

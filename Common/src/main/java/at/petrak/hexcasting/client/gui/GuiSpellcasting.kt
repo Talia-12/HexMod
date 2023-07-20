@@ -565,6 +565,7 @@ class GuiSpellcasting constructor(
         ps.popPose()
 
         ps.pushPose()
+        ps.translate(0.0, 10.0, 0.0)
 
         remainingVerticalSpace = this.height.toDouble() - 10.0
         if (this.ravenmind != null) {
@@ -602,7 +603,7 @@ class GuiSpellcasting constructor(
                 ps.translate(minDebuggerX.toDouble() + maxDebuggerXBuffer,  minDebuggerY.toDouble(), 0.0)
                 remainingVerticalSpace -= minDebuggerY
             }
-            drawBox(ps, 0.0f, 0.0f, maxDebuggerWidth.toFloat(), min(maxDebuggerHeight.toFloat() + maxDebuggerYBuffer, remainingVerticalSpace.toFloat()))
+            drawBox(ps, 0.0f, 0.0f, maxDebuggerWidth.toFloat(), min(maxDebuggerHeight.toFloat() + maxDebuggerYBuffer, remainingVerticalSpace.toFloat() - 10.0f))
 
             ps.translate(5.0, 5.0, 1.0)
             remainingVerticalSpace -= 5.0
