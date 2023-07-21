@@ -163,9 +163,11 @@ public class StaffCastEnv extends PlayerBasedCastEnv {
                     case StepOut -> {
                         var startingSize = continuation.numFrames();
                         Pair<SpellContinuation, ResolvedPatternType> out = null;
-                        while (continuation instanceof SpellContinuation.NotDone notDone && continuation.numFrames() >= startingSize) {
+                        var resolvedType = ResolvedPatternType.EVALUATED;
+                        while (continuation instanceof SpellContinuation.NotDone notDone && resolvedType.getSuccess() && continuation.numFrames() >= startingSize) {
                             out = vm.stepContinuationOnce(notDone, sender.serverLevel(), state.getTempControllerInfo());
                             continuation = out.getFirst();
+                            resolvedType = out.getSecond();
                         }
                         // must be non-null since if continuation wasn't NotDone then that would have been caught by the wrapping if-statement
                         assert out != null;
@@ -177,10 +179,12 @@ public class StaffCastEnv extends PlayerBasedCastEnv {
                         var startingSize = continuation.numFrames();
                         var out = vm.stepContinuationOnce((SpellContinuation.NotDone) continuation, sender.serverLevel(), state.getTempControllerInfo());
                         continuation = out.getFirst();
+                        var resolvedType = ResolvedPatternType.EVALUATED;
 
-                        while (continuation instanceof SpellContinuation.NotDone notDone && continuation.numFrames() > startingSize) {
+                        while (continuation instanceof SpellContinuation.NotDone notDone && resolvedType.getSuccess() && continuation.numFrames() > startingSize) {
                             out = vm.stepContinuationOnce(notDone, sender.serverLevel(), state.getTempControllerInfo());
                             continuation = out.getFirst();
+                            resolvedType = out.getSecond();
                         }
 
                         state.setContinuation(continuation);
@@ -194,11 +198,13 @@ public class StaffCastEnv extends PlayerBasedCastEnv {
                     case StepIntoSkipParens -> {
                         var out = vm.stepContinuationOnce((SpellContinuation.NotDone) continuation, sender.serverLevel(), state.getTempControllerInfo());
                         continuation = out.getFirst();
+                        var resolvedType = ResolvedPatternType.EVALUATED;
 
                         // continue stepping until the pattern-list under construction has been finished.
-                        while (continuation instanceof SpellContinuation.NotDone notDone && vm.getImage().getParenCount() != 0) {
+                        while (continuation instanceof SpellContinuation.NotDone notDone && resolvedType.getSuccess() && vm.getImage().getParenCount() != 0) {
                             out = vm.stepContinuationOnce(notDone, sender.serverLevel(), state.getTempControllerInfo());
                             continuation = out.getFirst();
+                            resolvedType = out.getSecond();
                         }
 
                         state.setContinuation(continuation);
@@ -224,6 +230,8 @@ public class StaffCastEnv extends PlayerBasedCastEnv {
                 clientView.isStackClear(), clientView.getStackDescs(), clientView.getRavenmind(),state.getContinuation().serializeToNBT());
 
         IXplatAbstractions.INSTANCE.sendPacketToPlayer(sender, new MsgDebuggerActionS2C(debugView));
+
+        IXplatAbstractions.INSTANCE.setStaffcastImage(sender, vm.getImage().withOverriddenUsedOps(0));
 
         if (clientView.getResolutionType().getSuccess()) {
             // Somehow we lost spraying particles on each new pattern, so do it here
