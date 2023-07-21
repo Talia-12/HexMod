@@ -18,6 +18,7 @@ public record MsgDebuggerActionC2S(InteractionHand handUsed, DebugType type) imp
         StepOut,
         StepOver,
         StepInto,
+        StepIntoSkipParens
     }
 
     @Override

@@ -191,6 +191,19 @@ public class StaffCastEnv extends PlayerBasedCastEnv {
                         state.setContinuation(out.getFirst());
                         clientView = vm.getExecutionClientView(out.getSecond());
                     }
+                    case StepIntoSkipParens -> {
+                        var out = vm.stepContinuationOnce((SpellContinuation.NotDone) continuation, sender.serverLevel(), state.getTempControllerInfo());
+                        continuation = out.getFirst();
+
+                        // continue stepping until the pattern-list under construction has been finished.
+                        while (continuation instanceof SpellContinuation.NotDone notDone && vm.getImage().getParenCount() != 0) {
+                            out = vm.stepContinuationOnce(notDone, sender.serverLevel(), state.getTempControllerInfo());
+                            continuation = out.getFirst();
+                        }
+
+                        state.setContinuation(continuation);
+                        clientView = vm.getExecutionClientView(out.getSecond());
+                    }
                 }
             }
         }

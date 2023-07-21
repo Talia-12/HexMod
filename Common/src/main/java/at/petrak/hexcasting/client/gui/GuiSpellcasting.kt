@@ -225,6 +225,10 @@ class GuiSpellcasting constructor(
             IClientXplatAbstractions.INSTANCE.sendPacketToServer(
                 MsgDebuggerActionC2S(this.handOpenedWith, MsgDebuggerActionC2S.DebugType.StepInto)
             )
+        } else if (displayDebugger && HexKeyMappings.DEBUG_STEP_INTO_SKIP_PARENS_KEY.matches(keycode, mysteryNumberA)) {
+            IClientXplatAbstractions.INSTANCE.sendPacketToServer(
+                    MsgDebuggerActionC2S(this.handOpenedWith, MsgDebuggerActionC2S.DebugType.StepIntoSkipParens)
+            )
         } else {
             return false
         }
