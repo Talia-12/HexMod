@@ -72,6 +72,7 @@
       "hexcasting:harness",
       "hexcasting:patterns",
       "hexcasting:client_casting_stack",
+      "hexcasting:debugger",
       "hexcasting:pigment",
       "hexcasting:iota_holder",
       "hexcasting:media_holder",
