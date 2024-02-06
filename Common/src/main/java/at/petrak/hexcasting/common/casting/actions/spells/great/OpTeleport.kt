@@ -15,6 +15,7 @@ import at.petrak.hexcasting.api.mod.HexTags
 import at.petrak.hexcasting.common.msgs.MsgBlinkS2C
 import at.petrak.hexcasting.xplat.IXplatAbstractions
 import net.minecraft.core.BlockPos
+import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.server.level.TicketType
@@ -66,6 +67,9 @@ object OpTeleport : SpellAction {
                 // Drop items conditionally, based on distance teleported.
                 // MOST IMPORTANT: Never drop main hand item, since if it's a trinket, it will get duplicated later.
 
+                if (!HexConfig.server().teleportDropItems())
+                    return
+
                 val baseDropChance = distance / 10000.0
 
                 // Armor and hotbar items have a further reduced chance to be dropped since it's particularly annoying
@@ -83,6 +87,8 @@ object OpTeleport : SpellAction {
 
                 for ((pos, invItem) in teleportee.inventory.items.withIndex()) {
                     if (invItem == teleportee.mainHandItem) continue
+                    if (!HexConfig.server().teleportDropItem(BuiltInRegistries.ITEM.getKey(invItem.item))) continue
+
                     val dropChance = if (pos < 9) baseDropChance * 0.5 else baseDropChance // hotbar
                     if (Math.random() < dropChance) {
                         teleportee.drop(invItem.copy(), true, false)

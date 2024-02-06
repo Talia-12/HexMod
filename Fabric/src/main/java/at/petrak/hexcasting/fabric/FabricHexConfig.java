@@ -178,6 +178,12 @@ public class FabricHexConfig extends PartitioningSerializer.GlobalData {
         @ConfigEntry.Gui.Tooltip
         private List<String> tpDimDenylist = DEFAULT_DIM_TP_DENYLIST;
 
+        @ConfigEntry.Gui.Tooltip
+        private boolean teleportDropItems = DEFAULT_TELEPORT_DROP_ITEMS;
+
+        @ConfigEntry.Gui.Tooltip
+        private List<String> tpItemDropDenylist = DEFAULT_TP_ITEM_DROP_DENYLIST;
+
         // ModMenu bad and doesn't like java objects in here so we do stupid string parsing
         @ConfigEntry.Gui.Tooltip
         private List<String> scrollInjectionsRaw = HexLootHandler.DEFAULT_SCROLL_INJECTS
@@ -248,6 +254,16 @@ public class FabricHexConfig extends PartitioningSerializer.GlobalData {
         @Override
         public boolean canTeleportInThisDimension(ResourceKey<Level> dimension) {
             return noneMatch(tpDimDenylist, dimension.location());
+        }
+
+        @Override
+        public boolean teleportDropItems() {
+            return teleportDropItems;
+        }
+
+        @Override
+        public boolean teleportDropItem(ResourceLocation item) {
+            return noneMatch(tpItemDropDenylist, item);
         }
 
         /**

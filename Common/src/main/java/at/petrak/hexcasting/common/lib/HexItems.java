@@ -72,7 +72,7 @@ public class HexItems {
     public static final ItemAbacus ABACUS = make("abacus", new ItemAbacus(unstackable()));
     public static final ItemThoughtKnot THOUGHT_KNOT = make("thought_knot", new ItemThoughtKnot(unstackable()));
     public static final ItemFocus FOCUS = make("focus", new ItemFocus(unstackable()));
-    public static final ItemSpellbook SPELLBOOK = make("spellbook", new ItemSpellbook(unstackable()));
+    public static final ItemSpellbook SPELLBOOK = make("spellbook", new ItemSpellbook(unstackable().fireResistant()));
 
     public static final ItemCypher CYPHER = make("cypher", new ItemCypher(unstackable()));
     public static final ItemTrinket TRINKET = make("trinket", new ItemTrinket(unstackable().rarity(Rarity.UNCOMMON)));

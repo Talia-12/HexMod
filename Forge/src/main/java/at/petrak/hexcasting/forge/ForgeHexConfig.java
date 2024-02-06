@@ -134,6 +134,10 @@ public class ForgeHexConfig implements HexConfig.CommonConfigAccess {
 
         private static ForgeConfigSpec.ConfigValue<List<? extends String>> tpDimDenyList;
 
+        private static ForgeConfigSpec.BooleanValue teleportDropItems;
+
+        private static ForgeConfigSpec.ConfigValue<List<? extends String>> tpItemDropDenylist;
+
         private static ForgeConfigSpec.ConfigValue<List<? extends String>> fewScrollTables;
         private static ForgeConfigSpec.ConfigValue<List<? extends String>> someScrollTables;
         private static ForgeConfigSpec.ConfigValue<List<? extends String>> manyScrollTables;
@@ -170,6 +174,12 @@ public class ForgeHexConfig implements HexConfig.CommonConfigAccess {
 
             tpDimDenyList = builder.comment("Resource locations of dimensions you can't Blink or Greater Teleport in.")
                 .defineList("tpDimDenyList", DEFAULT_DIM_TP_DENYLIST, Server::isValidReslocArg);
+
+            teleportDropItems = builder.comment("Whether Greater Teleporting drops any items at all for the caster.")
+                .define("teleportDropItems", DEFAULT_TELEPORT_DROP_ITEMS);
+
+            tpItemDropDenylist = builder.comment("Resource locations of items that won't be dropped when Greater Teleporting.")
+                    .defineList("tpItemDropDenylist", DEFAULT_TP_ITEM_DROP_DENYLIST, Server::isValidReslocArg);
         }
 
         @Override
@@ -205,6 +215,16 @@ public class ForgeHexConfig implements HexConfig.CommonConfigAccess {
         @Override
         public boolean canTeleportInThisDimension(ResourceKey<Level> dimension) {
             return noneMatch(tpDimDenyList.get(), dimension.location());
+        }
+
+        @Override
+        public boolean teleportDropItems() {
+            return teleportDropItems.get();
+        }
+
+        @Override
+        public boolean teleportDropItem(ResourceLocation item) {
+            return noneMatch(tpItemDropDenylist.get(), item);
         }
 
         private static boolean isValidReslocArg(Object o) {
