@@ -9,6 +9,7 @@ import at.petrak.hexcasting.api.casting.eval.CastResult;
 import at.petrak.hexcasting.api.casting.eval.CastingEnvironment;
 import at.petrak.hexcasting.api.casting.eval.MishapEnvironment;
 import at.petrak.hexcasting.api.casting.eval.sideeffects.OperatorSideEffect;
+import at.petrak.hexcasting.api.casting.eval.vm.CastingImage;
 import at.petrak.hexcasting.api.casting.mishaps.Mishap;
 import at.petrak.hexcasting.api.casting.mishaps.MishapDisallowedSpell;
 import at.petrak.hexcasting.api.mod.HexConfig;
@@ -33,6 +34,10 @@ import static at.petrak.hexcasting.api.casting.eval.env.PlayerBasedCastEnv.SENTI
 
 public class CircleCastEnv extends CastingEnvironment {
     protected final CircleExecutionState execState;
+
+    private int soundsPlayed = 0;
+    private @Nullable Mishap lastMishap = null;
+    private @Nullable Mishap.Context lastMishapContext = null;
 
     public CircleCastEnv(ServerLevel world, CircleExecutionState execState) {
         super(world);
@@ -83,9 +88,10 @@ public class CircleCastEnv extends CastingEnvironment {
 
         // we always want to play this sound one at a time
         var sound = result.getSound().sound();
-        if (sound != null) {
+        if (soundsPlayed < 100 && sound != null) { // TODO: Make configurable
             var soundPos = this.execState.currentPos;
             this.world.playSound(null, soundPos, sound, SoundSource.PLAYERS, 1f, 1f);
+            soundsPlayed++;
         }
 
         // TODO: this is gonna bite us in the bum someday
@@ -96,13 +102,28 @@ public class CircleCastEnv extends CastingEnvironment {
         if (imp != null) {
             for (var sideEffect : result.getSideEffects()) {
                 if (sideEffect instanceof OperatorSideEffect.DoMishap doMishap) {
-                    var msg = doMishap.getMishap().errorMessageWithName(this, doMishap.getErrorCtx());
-                    if (msg != null) {
-                        imp.postMishap(msg);
-                    }
+                    lastMishap = doMishap.getMishap();
+                    lastMishapContext = doMishap.getErrorCtx();
                 }
             }
         }
+    }
+
+    @Override
+    public void postCast(CastingImage image) {
+        super.postCast(image);
+
+        var imp = this.getImpetus();
+        if (lastMishap != null && lastMishapContext != null && imp != null) {
+            var msg = lastMishap.errorMessageWithName(this, lastMishapContext);
+            if (msg != null) {
+                imp.postMishap(msg);
+            }
+        }
+
+        soundsPlayed = 0;
+        lastMishap = null;
+        lastMishapContext = null;
     }
 
     @Override

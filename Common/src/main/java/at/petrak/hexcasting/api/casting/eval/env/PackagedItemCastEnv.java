@@ -2,7 +2,9 @@ package at.petrak.hexcasting.api.casting.eval.env;
 
 import at.petrak.hexcasting.api.casting.eval.CastResult;
 import at.petrak.hexcasting.api.casting.eval.sideeffects.EvalSound;
+import at.petrak.hexcasting.api.casting.eval.vm.CastingImage;
 import at.petrak.hexcasting.api.casting.iota.PatternIota;
+import at.petrak.hexcasting.api.casting.math.HexPattern;
 import at.petrak.hexcasting.api.pigment.FrozenPigment;
 import at.petrak.hexcasting.common.lib.hex.HexEvalSounds;
 import at.petrak.hexcasting.common.msgs.MsgNewSpiralPatternsS2C;
@@ -10,11 +12,14 @@ import at.petrak.hexcasting.xplat.IXplatAbstractions;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 public class PackagedItemCastEnv extends PlayerBasedCastEnv {
 
     protected EvalSound sound = HexEvalSounds.NOTHING;
+
+    private final Set<HexPattern> castPatterns = new HashSet<>();
 
     public PackagedItemCastEnv(ServerPlayer caster, InteractionHand castingHand) {
         super(caster, castingHand);
@@ -25,15 +30,24 @@ public class PackagedItemCastEnv extends PlayerBasedCastEnv {
         super.postExecution(result);
 
         if (result.component1() instanceof PatternIota patternIota) {
-            var packet = new MsgNewSpiralPatternsS2C(
-                    this.caster.getUUID(), List.of(patternIota.getPattern()), 140
-            );
-            IXplatAbstractions.INSTANCE.sendPacketToPlayer(this.caster, packet);
-            IXplatAbstractions.INSTANCE.sendPacketTracking(this.caster, packet);
+            castPatterns.add(patternIota.getPattern());
         }
 
         // TODO: how do we know when to actually play this sound?
         this.sound = this.sound.greaterOf(result.getSound());
+    }
+
+    @Override
+    public void postCast(CastingImage image) {
+        super.postCast(image);
+
+        var packet = new MsgNewSpiralPatternsS2C(
+                this.caster.getUUID(), castPatterns.stream().toList(), 140
+        );
+        IXplatAbstractions.INSTANCE.sendPacketToPlayer(this.caster, packet);
+        IXplatAbstractions.INSTANCE.sendPacketTracking(this.caster, packet);
+
+        castPatterns.clear();
     }
 
     @Override
