@@ -1,6 +1,8 @@
 package at.petrak.hexcasting.common.loot;
 
+import at.petrak.hexcasting.api.HexAPI;
 import at.petrak.hexcasting.api.casting.ActionRegistryEntry;
+import at.petrak.hexcasting.api.mod.HexConfig;
 import at.petrak.hexcasting.api.mod.HexTags;
 import at.petrak.hexcasting.api.utils.HexUtils;
 import at.petrak.hexcasting.common.casting.PatternRegistryManifest;
@@ -40,7 +42,7 @@ public class AddPerWorldPatternToScrollFunc extends LootItemConditionalFunction 
         var perWorldKeys = new ArrayList<ResourceKey<ActionRegistryEntry>>();
         Registry<ActionRegistryEntry> regi = IXplatAbstractions.INSTANCE.getActionRegistry();
         for (var key : regi.registryKeySet()) {
-            if (HexUtils.isOfTag(regi, key, HexTags.Actions.PER_WORLD_PATTERN)) {
+            if (HexUtils.isOfTag(regi, key, HexTags.Actions.PER_WORLD_PATTERN) && HexConfig.server().isActionAllowed(key.location())) {
                 perWorldKeys.add(key);
             }
         }
@@ -49,7 +51,11 @@ public class AddPerWorldPatternToScrollFunc extends LootItemConditionalFunction 
         var pat = PatternRegistryManifest.getCanonicalStrokesPerWorld(key, ctx.getLevel().getServer().overworld());
         var tag = new CompoundTag();
         tag.putString(ItemScroll.TAG_OP_ID, key.location().toString());
-        tag.put(ItemScroll.TAG_PATTERN, pat.serializeToNBT());
+        if (pat != null) {
+            tag.put(ItemScroll.TAG_PATTERN, pat.serializeToNBT());
+        } else {
+            HexAPI.LOGGER.warn("Tried to generate great scroll for %s, doesn't have canonical per-world strokes.".formatted(key));
+        }
 
         stack.getOrCreateTag().merge(tag);
 
